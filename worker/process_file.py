@@ -78,12 +78,15 @@ def process_chunk(packets, fileId):
 
 
 
-def process_file(file_path, queue_process, filter_protocols):
+def process_file(file_path, queue_process, filter_protocols, tshark_path):
     packets = []
     packet_chunk_size = 1000
 
     try:
-        capture = pyshark.FileCapture(file_path, display_filter=filter_protocols, use_json=True)
+        if tshark_path is None:
+            capture = pyshark.FileCapture(file_path, display_filter=filter_protocols, use_json=True)
+        else:
+            capture = pyshark.FileCapture(file_path, display_filter=filter_protocols, use_json=True, tshark_path=tshark_path)
         for packet in capture:
             packets.append(packet)
             if len(packets) >= packet_chunk_size:
