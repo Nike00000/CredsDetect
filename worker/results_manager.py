@@ -6,7 +6,8 @@ def dict_results():
         'pop3': {},
         'netntlmv2': {},
         'imap': [],
-        'smtp': {}
+        'smtp': {},
+        'http_authbasic': []
     }
     return dict_pattern
 

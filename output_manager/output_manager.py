@@ -1,4 +1,6 @@
 import os.path
+
+from output_manager.formatters.http_formatter import extract_http_auth_basic
 from output_manager.formatters.kerberos_formatter import *
 from output_manager.formatters.ntlm_formatter import *
 from output_manager.formatters.pop_formatter import *
@@ -8,7 +10,7 @@ from tabulate import tabulate
 
 def print_hashes(hashes, name, hashcat):
     if len(hashes) > 0:
-        print(f"Found {len(hashes)} {name} hashes with (hashcat type {hashcat})")
+        print(f"Found {len(hashes)} {name} hashes (hashcat type {hashcat})")
         for hash_one in hashes:
             print(hash_one)
         print()
@@ -97,8 +99,9 @@ def print_results(folder, task_name, results):
                 ['NetNTLM', len(ntlm_unique), len(ntlm_users), len(ntlm_all), 5600]]
 
     print(tabulate(list_hashes_tab, headers=['type', 'unique', 'users', 'all', 'hashcat']))
+    print()
 
-    #Вывод POP результатов 
+    #Write POP
     pop_creds = extract_pop3(results['pop3'], True)
     if len(pop_creds):
         print(f"Found {len(pop_creds)} unique POP credentials")
@@ -108,7 +111,7 @@ def print_results(folder, task_name, results):
                                f"{task_name}_pop.txt", folder)
 
 
-    #Вывод IMAP результатов
+    #Write IMAP
     imap_creds = extract_imap(results['imap'], True)
     if len(imap_creds):
         print(f"Found {len(imap_creds)} unique IMAP credentials")
@@ -118,7 +121,7 @@ def print_results(folder, task_name, results):
                                f"{task_name}_imap.txt", folder)
 
 
-    #Вывод SMTP результатов
+    #Write SMTP
     smtp_creds = extract_smtp(results['smtp'], True)
     if len(smtp_creds):
         print(f"Found {len(smtp_creds)} unique SMTP credentials")
@@ -126,6 +129,17 @@ def print_results(folder, task_name, results):
         print()
         write_in_file_tabulate(smtp_creds, ['src', 'dst', 'user', 'pass'],
                                f"{task_name}_smtp.txt", folder)
+
+        print(f'All results saved in {folder}\n')
+
+    # Write HTTP
+    http_creds = extract_http_auth_basic(results['http_authbasic'], True)
+    if len(http_creds):
+        headers = ['src', 'dst', 'user', 'pass', 'uri']
+        print(f"Found {len(http_creds)} unique HTTP basic authentication")
+        print(tabulate(http_creds, headers=headers))
+        print()
+        write_in_file_tabulate(http_creds, headers,f"{task_name}_http_authbasic.txt", folder)
 
         print(f'All results saved in {folder}\n')
 

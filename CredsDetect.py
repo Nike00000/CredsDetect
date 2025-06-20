@@ -61,7 +61,7 @@ if __name__ == "__main__":
     if not args.threads is None:
         count_processes = min(len(input_files), args.threads)
     #Filter protocols
-    default_protocols = ['kerberos', 'ntlmssp', 'pop', 'imap', 'smtp']
+    default_protocols = ['kerberos', 'ntlmssp', 'pop', 'imap', 'smtp', 'http.authbasic']
     filter_protocols = ' or '.join(default_protocols)
     print(f'Protocol filtering is performed with "{filter_protocols}"')
     #Output folder

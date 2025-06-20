@@ -6,6 +6,7 @@ from parsers.ntlm_parser import *
 from parsers.pop_parser import *
 from parsers.imap_parser import *
 from parsers.smtp_parser import *
+from parsers.http_parse import *
 from worker.results_manager import *
 
 def process_chunk(packets, fileId):
@@ -72,6 +73,12 @@ def process_chunk(packets, fileId):
                 chunk_results['netntlmv2'][tcpId].append(ntlm_cred)
             else:
                 chunk_results['netntlmv2'][tcpId] = [ntlm_cred]
+        except:
+            pass
+        try:
+            http_basic = http_auth_basic_proxy(packet)
+            if not http_basic is None:
+                chunk_results['http_authbasic'].append(http_basic)
         except:
             pass
     return chunk_results
