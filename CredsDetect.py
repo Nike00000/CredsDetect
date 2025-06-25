@@ -49,6 +49,8 @@ if __name__ == "__main__":
     if (tshark_path is None) or not os.path.exists(tshark_path):
         config_tshark = False
         print('The correct path to the TShark is not specified in the configuration file')
+    else:
+        print(f"TShark path in config.txt {tshark_path}")
     if not config_tshark:
         tshark_version = check_tshark_installed()
         if not tshark_version is None:
@@ -84,12 +86,10 @@ if __name__ == "__main__":
         print(f"{count_processes} threads have been selected for file processing")
         with multiprocessing.Pool(processes=count_processes) as pool:
             #Создание пула задач обработки
-            if config_tshark:
-                for file_path in input_files:
-                    pool.apply_async(process_file, args=(file_path, queue, filter_protocols, tshark_path))
-            else:
-                for file_path in input_files:
-                    pool.apply_async(process_file, args=(file_path, queue, filter_protocols))
+            if not config_tshark:
+                tshark_path = None
+            for file_path in input_files:
+                pool.apply_async(process_file, args=(file_path, queue, filter_protocols, tshark_path))
             #Обработка промежуточных результатов
 
             with tqdm(total=count_files, desc='Processing files', ncols=100) as pbar:
