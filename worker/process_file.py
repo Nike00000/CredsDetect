@@ -66,6 +66,13 @@ def process_chunk(packets, fileId):
             except:
                 pass
             continue
+        if 'http' in packet:
+            try:
+                http_basic = http_auth_basic(packet)
+                if not http_basic is None:
+                    chunk_results['http_authbasic'].append(http_basic)
+            except:
+                pass
         try:
             ntlm_cred = ntlm_parse(packet)
             tcpId = f"{fileId}_{ntlm_cred['stream']}"
@@ -73,14 +80,10 @@ def process_chunk(packets, fileId):
                 chunk_results['netntlmv2'][tcpId].append(ntlm_cred)
             else:
                 chunk_results['netntlmv2'][tcpId] = [ntlm_cred]
+            continue
         except:
             pass
-        try:
-            http_basic = http_auth_basic_proxy(packet)
-            if not http_basic is None:
-                chunk_results['http_authbasic'].append(http_basic)
-        except:
-            pass
+
     return chunk_results
 
 

@@ -135,7 +135,7 @@ def print_results(folder, task_name, results):
     # Write HTTP
     http_creds = extract_http_auth_basic(results['http_authbasic'], True)
     if len(http_creds):
-        headers = ['src', 'dst', 'user', 'pass', 'uri']
+        headers = ['src', 'dst', 'user', 'pass', 'type', 'uri']
         print(f"Found {len(http_creds)} unique HTTP basic authentication")
         print(tabulate(http_creds, headers=headers))
         print()
