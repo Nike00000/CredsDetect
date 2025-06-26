@@ -1,5 +1,5 @@
 from parsers.tcp_parser import tcp_parse
-
+import base64
 
 def find_int(data_bytes, position, length):
     value_raw = data_bytes[position:(position + length)]
@@ -27,16 +27,25 @@ def decode_word(data_bytes, length_position, length_size, offset_position, offse
 def ntlm_parse(packet):
     try:
         ntlm_cred = tcp_parse(packet)
-
-        payload = packet.tcp.payload
-        payload_str = str(payload).replace(':','')
-
         ntlmssp_signature = "4e544c4d535350"
         challenge_length = 16
 
+        payload = packet.tcp.payload
+
+        payload_str = str(payload).replace(':','')
         offset = payload_str.find(ntlmssp_signature)
-        if not offset:
-            return None
+
+        if offset < 0:
+            #Try proxy HTTP
+            try:
+                proxy_str = str(packet.http.proxy_authorization)
+            except:
+                proxy_str = str(packet.http.proxy_authenticate)
+            payload_base64 = proxy_str.split(' ')[1]
+            payload_str= base64.b64decode(payload_base64).hex()
+            offset = payload_str.find(ntlmssp_signature)
+            if offset < 0:
+                return None
 
         payload_str = payload_str[offset:]
 
