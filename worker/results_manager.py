@@ -8,7 +8,7 @@ def dict_results():
         'imap': [],
         'smtp': {},
         'http_authbasic': [],
-        'ftp': []
+        'ftp': {}
     }
     return dict_pattern
 

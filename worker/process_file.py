@@ -68,12 +68,13 @@ def process_chunk(packets, fileId):
                 pass
             continue
         if 'ftp' in packet:
-            try:
-                ftp_creds = ftp_parse(packet)
-                if not ftp_creds is None:
-                    chunk_results['ftp'].append(ftp_creds)
-            except:
-                pass
+            ftp_creds = ftp_parse(packet)
+            if not ftp_creds is None:
+                tcpId = f"{fileId}_{ftp_creds['stream']}"
+                if tcpId in chunk_results['ftp']:
+                    chunk_results['ftp'][tcpId].append(ftp_creds)
+                else:
+                    chunk_results['ftp'][tcpId] = [ftp_creds]
             continue
         if 'http' in packet:
             try:
