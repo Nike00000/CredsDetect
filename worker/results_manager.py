@@ -7,7 +7,8 @@ def dict_results():
         'netntlmv2': {},
         'imap': [],
         'smtp': {},
-        'http_authbasic': []
+        'http_authbasic': [],
+        'ftp': []
     }
     return dict_pattern
 

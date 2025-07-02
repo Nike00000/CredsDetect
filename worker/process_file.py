@@ -7,6 +7,7 @@ from parsers.pop_parser import *
 from parsers.imap_parser import *
 from parsers.smtp_parser import *
 from parsers.http_parse import *
+from parsers.ftp_parser import *
 from worker.results_manager import *
 
 def process_chunk(packets, fileId):
@@ -63,6 +64,14 @@ def process_chunk(packets, fileId):
                         chunk_results['smtp'][tcpId].append(creds)
                     else:
                         chunk_results['smtp'][tcpId] = [creds]
+            except:
+                pass
+            continue
+        if 'ftp' in packet:
+            try:
+                ftp_creds = ftp_parse(packet)
+                if not ftp_creds is None:
+                    chunk_results['ftp'].append(ftp_creds)
             except:
                 pass
             continue

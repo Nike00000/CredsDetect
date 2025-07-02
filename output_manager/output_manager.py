@@ -6,6 +6,7 @@ from output_manager.formatters.ntlm_formatter import *
 from output_manager.formatters.pop_formatter import *
 from output_manager.formatters.imap_formatter import *
 from output_manager.formatters.smtp_formatter import *
+from output_manager.formatters.ftp_formatter import *
 from tabulate import tabulate
 
 def print_hashes(hashes, name, hashcat):
@@ -140,6 +141,17 @@ def print_results(folder, task_name, results):
         print(tabulate(http_creds, headers=headers))
         print()
         write_in_file_tabulate(http_creds, headers,f"{task_name}_http_authbasic.txt", folder)
+
+        print(f'All results saved in {folder}\n')
+
+    # Write FTP
+    ftp_creds = extract_ftp(results['ftp'], True)
+    if len(ftp_creds):
+        headers = ['src', 'dst', 'user', 'pass']
+        print(f"Found {len(ftp_creds)} unique FTP credentials")
+        print(tabulate(ftp_creds, headers=headers))
+        print()
+        write_in_file_tabulate(ftp_creds, headers, f"{task_name}_ftp.txt", folder)
 
         print(f'All results saved in {folder}\n')
 
