@@ -1,71 +1,46 @@
-def extract_asreq(as_req_data:list, unique, machine, etype):
-    results = list()
-    results_dict = dict()
-    for as_req in as_req_data:
-        if not machine and '$' in as_req['cname']:
-            continue
-        if not etype == as_req['etype']:
-            continue
-        asreq_format = f"$krb5pa${as_req['etype']}${as_req['cname']}${as_req['realm']}${as_req['cipher']}"
-        if unique:
-            asreq_id = f"$krb5pa${as_req['etype']}${as_req['cname']}${as_req['realm']}"
-            results_dict[asreq_id] = asreq_format
-        else:
-            results.append(asreq_format)
-
-    if unique:
-        for key in results_dict.keys():
-            results.append(results_dict[key])
-    return results
-
-def extract_asrep(hashes:list, unique, machine, etype):
-    results = list()
-    results_dict = dict()
-    for hash in hashes:
-        if not machine and '$' in hash['cname']:
-            continue
-        if not etype == hash['etype']:
-            continue
-        hash_in_format = asrep_format(hash)
-        if unique:
-            hash_id = f"$krb5asrep${hash['etype']}${hash['cname']}@{hash['realm']}"
-            results_dict[hash_id] = hash_in_format
-        else:
-            results.append(hash_in_format)
-
-    if unique:
-        for key in results_dict.keys():
-            results.append(results_dict[key])
-    return results
-
-def extract_tgsrep(hashes:list, unique, machine, etype):
-    results = list()
-    results_dict = dict()
-    for hash in hashes:
-        if not machine and '$' in hash['cname']:
-            continue
-        if not etype == hash['etype']:
-            continue
-        hash_in_format = tgsrep_format(hash)
-        if unique:
-            hash_id = f"$krb5tgs${hash['etype']}$*{hash['cname']}${hash['realm']}"
-            results_dict[hash_id] = hash_in_format
-        else:
-            results.append(hash_in_format)
-
-    if unique:
-        for key in results_dict.keys():
-            results.append(results_dict[key])
-    return results
-
-def asreq_format(as_rep):
-    return f"$krb5pa${as_rep['etype']}${as_rep['cname']}${as_rep['realm']}${as_rep['cipher']}"
-
-def asrep_format(as_rep):
-    return f"$krb5asrep${as_rep['etype']}${as_rep['cname']}@{as_rep['realm']}:{as_rep['cipher'][:24]}${as_rep['cipher'][24:]}"
-
-def tgsrep_format(tgs_rep):
-    if tgs_rep['etype'] == 23:
-        return f"$krb5tgs${tgs_rep['etype']}$*{tgs_rep['cname']}${tgs_rep['realm']}${tgs_rep['sname']}*${tgs_rep['cipher'][:32]}${tgs_rep['cipher'][32:]}"
+def get_kerberos_data_str(packet:dict):
+    if 'asreq' in packet['type']:
+        func = asreq_format
+    elif 'asrep' in packet['type']:
+        func = asrep_format
+    elif 'tgsrep' in packet['type']:
+        func = tgsrep_format
     else:
-        return f"$krb5tgs${tgs_rep['etype']}${tgs_rep['sname']}${tgs_rep['realm']}${tgs_rep['cipher'][:24]}${tgs_rep['cipher'][24:]}"
+        return 'unknown', 'unknown'
+    return func(packet['data'])
+
+def sort_kerberos_type(packets:list, unique, machine, hash_type):
+    results = list()
+    hash_id_list = list()
+    packets_by_time = sorted(packets, key=lambda x: x['time'], reverse=True)
+    for packet in packets_by_time:
+        if not machine and '$' in packet['data']['cname']:
+            continue
+        if not packet['type'] == hash_type:
+            continue
+        hash_id, hash_data = get_kerberos_data_str(packet)
+        if unique:
+            if hash_id in hash_id_list:
+                continue
+            hash_id_list.append(hash_id)
+        results.append(packet)
+
+    return results
+
+def asreq_format(data:dict):
+    hash_data = f"$krb5pa${data['etype']}${data['cname']}${data['realm']}${data['cipher']}"
+    hash_id = f"$krb5pa${data['etype']}${data['cname']}${data['realm']}"
+    return hash_id, hash_data
+
+def asrep_format(data:dict):
+    hash_data = f"$krb5asrep${data['etype']}${data['cname']}@{data['realm']}:{data['cipher'][:24]}${data['cipher'][24:]}"
+    hash_id = f"$krb5asrep${data['etype']}${data['cname']}@{data['realm']}"
+    return hash_id, hash_data
+
+def tgsrep_format(data:dict):
+    hash_id = f"$krb5tgs${data['etype']}$*{data['cname']}${data['realm']}"
+    if data['etype'] == 23:
+        hash_data = f"$krb5tgs${data['etype']}$*{data['cname']}${data['realm']}${data['sname']}*${data['cipher'][:32]}${data['cipher'][32:]}"
+    else:
+        hash_data = f"$krb5tgs${data['etype']}${data['sname']}${data['realm']}${data['cipher'][:24]}${data['cipher'][24:]}"
+    return hash_id, hash_data

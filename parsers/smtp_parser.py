@@ -1,4 +1,3 @@
-from parsers.tcp_parser import tcp_parse
 import base64
 
 def decode_base64_string(base64_string):
@@ -9,18 +8,18 @@ def decode_base64_string(base64_string):
 
 def smtp_packet(packet):
     try:
-        creds = tcp_parse(packet)
+        data = dict()
         layer = packet.smtp
         try:
-            creds['username'] = decode_base64_string(layer.username)
-            return creds
+            data['user'] = decode_base64_string(layer.username)
+            return 'SMTP', 'ClearText', 'user', data
         except:
             pass
         try:
-            creds['password'] = decode_base64_string(layer.password)
-            return creds
+            data['pass'] = decode_base64_string(layer.password)
+            return 'SMTP', 'ClearText', 'pass', data
         except:
             pass
-        return None
+        return None, None, None, None
     except:
-        return None
+        return None, None, None, None

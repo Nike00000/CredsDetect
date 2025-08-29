@@ -1,6 +1,3 @@
-from parsers.tcp_parser import tcp_parse
-import base64
-
 def find_int(data_bytes, position, length):
     value_raw = data_bytes[position:(position + length)]
     return int.from_bytes(value_raw, 'little')
@@ -24,47 +21,46 @@ def decode_word(data_bytes, length_position, length_size, offset_position, offse
     word = data_bytes[offset: (offset + length)].decode('utf-16')
     return word
 
-def ntlm_parse(packet):
+def ntlm_tcp_payload_parse(packet):
     try:
-        ntlm_cred = tcp_parse(packet)
+        payload = packet.tcp.payload
+        payload_str = str(payload).replace(':', '')
+        ntlm_type, ntlm_data = ntlm_parse(payload_str)
+        if ntlm_type is None or ntlm_data is None:
+            return None, None, None, None
+        return 'TCP', 'NetNTLM', ntlm_type, ntlm_data
+    except:
+        return None, None, None, None
+
+def ntlm_parse(payload_str):
+    try:
+        data = dict()
         ntlmssp_signature = "4e544c4d535350"
         challenge_length = 16
-
-        payload = packet.tcp.payload
-
-        payload_str = str(payload).replace(':','')
         offset = payload_str.find(ntlmssp_signature)
-
-        if offset < 0:
-            #Try proxy HTTP
-            try:
-                proxy_str = str(packet.http.proxy_authorization)
-            except:
-                proxy_str = str(packet.http.proxy_authenticate)
-            payload_base64 = proxy_str.split(' ')[1]
-            payload_str= base64.b64decode(payload_base64).hex()
-            offset = payload_str.find(ntlmssp_signature)
-            if offset < 0:
-                return None
-
         payload_str = payload_str[offset:]
-
         payload_bytes = bytes.fromhex(payload_str)
 
-        ntlm_cred['type'] = find_int(payload_bytes, 8, 4)
-        match ntlm_cred['type']:
-            case 1:
-                return None
+        data['type'] = find_int(payload_bytes, 8, 4)
+        match data['type']:
             case 2:
-                ntlm_cred['challenge'] = payload_str[48: 48 + challenge_length]
+                data['challenge'] = payload_str[48: 48 + challenge_length]
+                return 'challenge', data
             case 3:
-                ntlm_cred['lm_response'] = find_word(payload_bytes, 12,2,16,4)
-                ntlm_cred['nt_response'] = find_word(payload_bytes, 20, 2, 24, 4)
-                ntlm_cred['domain'] = decode_word(payload_bytes, 28,2,32,4)
-                ntlm_cred['username'] = decode_word(payload_bytes, 36,2, 40, 4)
-                ntlm_cred['workstation'] = decode_word(payload_bytes, 44, 2, 48,  4)
-        return ntlm_cred
+                data['lm_response'] = find_word(payload_bytes, 12,2,16,4)
+                data['nt_response'] = find_word(payload_bytes, 20, 2, 24, 4)
+                data['domain'] = decode_word(payload_bytes, 28,2,32,4)
+                data['username'] = decode_word(payload_bytes, 36,2, 40, 4)
+                data['workstation'] = decode_word(payload_bytes, 44, 2, 48,  4)
+                if len(data['nt_response']) == 0:
+                    return None, None
+                version = 'nt_response_v1'
+                if len(data['nt_response'])>48:
+                    version = 'nt_response_v2'
+                return version, data
+            case _:
+                return None, None
     except Exception as e:
-        return None
+        return None, None
     
 

@@ -1,8 +1,6 @@
 import multiprocessing
 import datetime
-import os.path
 import sys
-
 from tqdm import tqdm
 import argparse
 from worker.process_file import *
@@ -19,6 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--name", type=str, help="name of the task to record the prefix of the result files")
     parser.add_argument("-o", "--output", type=str, help="path to the directory for results")
     parser.add_argument("-p", "--tshark_path", type=str, help="path to the TShark")
+    parser.add_argument("-с", "--current", action="store_true",  help="output current results (perhaps slow down!)")
     args = parser.parse_args()
     show_machines = False #Вывод аутентификационных данных машинных учётных записей NTLM, Kerberos
 
@@ -63,7 +62,15 @@ if __name__ == "__main__":
     if not args.threads is None:
         count_processes = min(len(input_files), args.threads)
     #Filter protocols
-    default_protocols = ['kerberos', 'ntlmssp', 'pop', 'imap', 'smtp', 'http.authbasic', 'ftp']
+    default_protocols = ['kerberos',
+                         'ntlmssp',
+                         'http.proxy_authenticate',
+                         'http.proxy_authorization',
+                         'http.authorization',
+                         'pop',
+                         'imap',
+                         'smtp',
+                         'ftp']
     filter_protocols = ' or '.join(default_protocols)
     print(f'Protocol filtering is performed with "{filter_protocols}"')
     #Output folder
@@ -78,40 +85,65 @@ if __name__ == "__main__":
     processed_files = 0
     with multiprocessing.Manager() as manager:
         queue = manager.Queue() #use the manager to create a shared queue.
-        results = dict_results() #dict with results
+        global_result_data = [] #list with results
+        shown_unique_data_id = []
         if count_processes == 0:
             print("The number of processes must be natural")
             sys.exit(1)
 
         print(f"{count_processes} threads have been selected for file processing")
-        with multiprocessing.Pool(processes=count_processes) as pool:
-            #Создание пула задач обработки
-            if not config_tshark:
-                tshark_path = None
+        pool = None
+        try:
+            pool = multiprocessing.Pool(processes=count_processes)
+            tasks = []
             for file_path in input_files:
-                pool.apply_async(process_file, args=(file_path, queue, filter_protocols, tshark_path))
-            #Обработка промежуточных результатов
-
+                task = pool.apply_async(
+                    process_file,
+                    args=(file_path, queue, filter_protocols, tshark_path),
+                    error_callback=lambda e, fp=file_path:
+                    tqdm.write(f"[!] Error processing {fp}: {e}"))
+                tasks.append(task)
             with tqdm(total=count_files, desc='Processing files', ncols=100) as pbar:
+                timeout = 10
                 while processed_files < count_files:
-                    file_path, current_results = queue.get()  # wait the chunk of results
-                    if current_results == 'Done':
-                        processed_files += 1  # file processing completed
-                        pbar.update(1)
-                        tqdm.write(f"[+] {file_path} completed ({processed_files}/{count_files}).")
-                    else:
-                        merge_dict_results(results, current_results)  # add chunk to common results
-                        for key in current_results.keys():
-                            if len(current_results[key]):
-                                tqdm.write(f"{file_path}: added {len(current_results[key])} {key} packets")
-            pool.close()
-            pool.join()
+                    try:
+                        file_path, current_results = queue.get(timeout=timeout)  # wait the chunk of results
+                        if current_results == 'Started':
+                            tqdm.write(f"[*] Started processing: {file_path}")
+                        elif current_results == 'Done':
+                            processed_files += 1  # file processing completed
+                            pbar.update(1)
+                            tqdm.write(f"[✓] {file_path} completed ({processed_files}/{count_files}).")
+                        else:
+                            global_result_data.extend(current_results)
+                            if args.current:
+                                show_str = print_current_results(current_results, shown_unique_data_id)
+                                tqdm.write(show_str)
+                            else:
+                                tqdm.write(f"[+] Found {len(current_results)} packets")
+                    except Exception as e:
+                        if "" == str(e):
+                            if all(task.ready() for task in tasks):
+                                tqdm.write("[!] Timeout waiting for results, tasks done. Closing.")
+                                break
+                            else:
+                                tqdm.write("[*] Timeout waiting for results, tasks active. Please wait...")
+                        else:
+                            tqdm.write(f"[!] Unexpected error: {e}")
+        except Exception as e:
+            tqdm.write(f"[!] Critical error: {e}")
+        finally:
+            tqdm.write("[*] Closing pool...")
+            if pool is not None:
+                pool.close()
+                pool.terminate()
+                pool.join()
 
     print('File processing completed. Post processing...\n')
 
-    process_result = multiprocessing.Process(target=print_results,args=(output_folder, task_name, results))
-    process_result.start()
-    process_result.join()
+    result_process = multiprocessing.Process(target=print_results, args=(output_folder, task_name, global_result_data))
+    result_process.start()
+    result_process.join()
 
     print('          ------------------------------')
     print("          | Done! Designed by @Nike417 |")

@@ -1,14 +1,12 @@
-from parsers.tcp_parser import tcp_parse
-
 def imap_packet(packet):
     try:
-        creds = tcp_parse(packet)
+        data = dict()
         imap_layer = packet.imap
         line = str(imap_layer.line).replace('\n','').replace('\r','')
         if 'LOGIN' in line and imap_layer.isrequest == '1':
-            creds['username'] = line.split(' ')[2][1:-1]
-            creds['password'] = line.split(' ')[3][1:-1]
-            return creds
-        return None
+            data['user'] = line.split(' ')[2][1:-1]
+            data['pass'] = line.split(' ')[3][1:-1]
+            return 'IMAP', 'ClearText', 'user:pass', data
+        return None, None, None, None
     except:
-        return None
+        return None, None, None, None

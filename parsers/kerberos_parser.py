@@ -1,63 +1,58 @@
-
-
-def asreq_packet(kerberos_layer):
+def kerberos_packet(packet):
     try:
-        as_req = {'cname': "",
-                  'realm': "",
-                  'etype': 0,
-                  'cipher': ""}
-        # Парсим как AS-REQ
-        as_req_layer = kerberos_layer.as_req_element
-        as_req['cname'] = as_req_layer.req_body_element.cname_element.cname_string_tree.CNameString
-        as_req['realm'] = as_req_layer.req_body_element.realm
-        padata_count = int(as_req_layer.padata)
-        for index in range(padata_count):
+        if not 'kerberos' in packet:
+            return None, None, None, None
+        kerberos_layer = packet.kerberos
+        if 'as_req_element' in kerberos_layer.field_names:
+            data_type, data = asreq_packet(kerberos_layer.as_req_element)
+        elif 'as_rep_element' in kerberos_layer.field_names:
+            data_type, data = asrep_packet(kerberos_layer.as_rep_element)
+        elif 'tgs_rep_element' in kerberos_layer.field_names:
+            data_type, data = tgsrep_packet(kerberos_layer.tgs_rep_element)
+        else:
+            return None, None, None, None
+        return 'TCP', 'Kerberos', data_type, data
+    except:
+        return None, None, None, None
+
+def asreq_packet(as_req_layer):
+    try:
+        data = dict()
+        data['cname'] = as_req_layer.req_body_element.cname_element.cname_string_tree.CNameString
+        data['realm'] = as_req_layer.req_body_element.realm
+        pa_data_count = int(as_req_layer.padata)
+        for index in range(pa_data_count):
             pa_data_element = as_req_layer.padata_tree.PA_DATA_element[index]
-            if pa_data_element.padata_type_tree.padata_value is None:
-                return None
-            else:
-                as_req['etype'] = int(pa_data_element.padata_type_tree.padata_value_tree.etype)
-                as_req['cipher'] = str(pa_data_element.padata_type_tree.padata_value_tree.cipher).replace(':', '')
-                return as_req
+            pa_data_value_tree = pa_data_element.padata_type_tree.padata_value_tree
+            data['etype'] = int(pa_data_value_tree.etype)
+            data['cipher'] = str(pa_data_value_tree.cipher).replace(':', '')
+            return f'asreq_{data['etype']}', data
+        return None, None
     except:
-        pass
+        return None, None
 
-def asrep_packet(kerberos_layer):
+def asrep_packet(as_rep_layer):
     try:
-        # Парсим как AS-REP
-        as_rep_layer = kerberos_layer.as_rep_element
-
-        as_rep = {'cname': "",
-                  'realm': "",
-                  'etype': 0,
-                  'cipher': ""}
-
-        as_rep['cname'] = as_rep_layer.cname_element.cname_string_tree.CNameString
-        as_rep['realm'] = as_rep_layer.crealm
-        as_rep['etype'] = int(as_rep_layer.ticket_element.enc_part_element.etype)
-        as_rep['cipher'] = str(as_rep_layer.ticket_element.enc_part_element.cipher).replace(':', '')
-
-        return as_rep
+        data = dict()
+        data['cname'] = as_rep_layer.cname_element.cname_string_tree.CNameString
+        data['realm'] = as_rep_layer.crealm
+        data['etype'] = int(as_rep_layer.ticket_element.enc_part_element.etype)
+        data['cipher'] = str(as_rep_layer.ticket_element.enc_part_element.cipher).replace(':', '')
+        return f'asrep_{data['etype']}', data
     except:
-        pass
+        return None, None
 
-def tgsrep_packet(kerberos_layer):
+def tgsrep_packet(tgs_rep_layer):
     try:
-        # Парсим как TGS-REP
-        tgs_rep = {'cname': "",
-                   'sname': "",
-                   'realm': "",
-                   'etype': 0,
-                   'cipher': ""}
-        tgs_rep_layer = kerberos_layer.tgs_rep_element
-        tgs_rep['cname'] = tgs_rep_layer.cname_element.cname_string_tree.CNameString
+        data = dict()
+        data['cname'] = tgs_rep_layer.cname_element.cname_string_tree.CNameString
         sname = []
         for index in range(int(tgs_rep_layer.ticket_element.sname_element.sname_string)):
             sname.append(tgs_rep_layer.ticket_element.sname_element.sname_string_tree.SNameString[index])
-        tgs_rep['sname'] = '/'.join(sname)
-        tgs_rep['realm'] = tgs_rep_layer.crealm
-        tgs_rep['etype'] = int(tgs_rep_layer.ticket_element.enc_part_element.etype)
-        tgs_rep['cipher'] = str(tgs_rep_layer.ticket_element.enc_part_element.cipher).replace(':', '')
-        return tgs_rep
+        data['sname'] = '/'.join(sname)
+        data['realm'] = tgs_rep_layer.crealm
+        data['etype'] = int(tgs_rep_layer.ticket_element.enc_part_element.etype)
+        data['cipher'] = str(tgs_rep_layer.ticket_element.enc_part_element.cipher).replace(':', '')
+        return f'tgsrep_{data['etype']}', data
     except:
-        pass
+        return None, None
