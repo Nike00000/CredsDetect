@@ -1,6 +1,8 @@
 import multiprocessing
 import datetime
 import sys
+
+from progress.colors import white
 from tqdm import tqdm
 import argparse
 from worker.process_file import *
@@ -17,7 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--name", type=str, help="name of the task to record the prefix of the result files")
     parser.add_argument("-o", "--output", type=str, help="path to the directory for results")
     parser.add_argument("-p", "--tshark_path", type=str, help="path to the TShark")
-    parser.add_argument("-с", "--current", action="store_true",  help="output current results (perhaps slow down!)")
+    parser.add_argument("-c", "--current", action="store_true",  help="output current results (perhaps slow down!)")
     args = parser.parse_args()
     show_machines = False #Вывод аутентификационных данных машинных учётных записей NTLM, Kerberos
 
@@ -77,6 +79,11 @@ if __name__ == "__main__":
     output_folder = os.path.join(os.getcwd(), 'results')
     if not args.output is None:
         output_folder = args.output
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    if not os.path.exists(output_folder):
+        print('[!] Output folder not exists!')
+        exit(1)
     #Taskname
     task_name = str(datetime.datetime.now()).replace(' ', '_').replace(':', '')
     if not args.name is None:
