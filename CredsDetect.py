@@ -84,6 +84,7 @@ if __name__ == "__main__":
     if not os.path.exists(output_folder):
         print('[!] Output folder not exists!')
         exit(1)
+
     #Taskname
     task_name = str(datetime.datetime.now()).replace(' ', '_').replace(':', '')
     if not args.name is None:

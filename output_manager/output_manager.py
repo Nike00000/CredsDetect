@@ -77,8 +77,7 @@ def print_results(folder:str, task_name:str, packets:list):
     join_ntlm_packets = find_ntlm_packet(sorted_by_session_ntlm_dict)
     ntlm_types = ['hash_v1','hash_v2','lm_response']
     ntlm_types_dict = {'hash_v1': '5500',
-                       'hash_v2': '5600',
-                       'lm_response': '3000'}
+                       'hash_v2': '5600'}
     for ntlm_type in ntlm_types:
         all_ntlm_hashes = sort_ntlm_type(join_ntlm_packets, False, True, ntlm_type)
         users_ntlm_hashes = sort_ntlm_type(join_ntlm_packets, False, False, ntlm_type)
