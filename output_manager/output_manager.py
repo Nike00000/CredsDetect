@@ -132,10 +132,14 @@ def write_in_file(packets, filename, folder):
     if len(packets) == 0:
         return
     file_path = os.path.join(folder, filename)
-    file = open(file_path, 'w', encoding='utf-8')
+    data_strs = []
     for packet in packets:
         data_key, data_str = get_cred_data_str(packet)
-        file.write(data_str + '\n')
+        data_strs.append(data_str)
+    data_strs.sort()
+    file = open(file_path, 'w', encoding='utf-8')
+    for sort_data_str in data_strs:
+        file.write(sort_data_str + '\n')
     file.close()
     return
 

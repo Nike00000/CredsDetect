@@ -41,19 +41,19 @@ def get_ntlm_data_str(packet:dict):
     data = packet['data']
     key, text = 'unknown', 'unknown'
     if 'challenge' in packet['type']:
-        key = packet['session_id']
+        key = packet['session_id']+packet['type']
         text = f"challenge: {data['challenge']}"
-    elif 'nt_response' in packet['type']:
-        key = f"{data['username']}@{data['domain']}"
+        return key.lower(), text
+    key = f"{data['username']}@{data['domain'].split('.')[0]}{packet['type']}"
+    if 'nt_response' in packet['type']:
         text = f"username: {data['username']}\nlm_response: {data['lm_response']}\nnt_response: {data['nt_response']}"
     elif 'hash_v2' in packet['type']:
-        key = f"{data['username']}::{data['domain']}"
-        text = f"{key}:{data['challenge']}:{data['nt_response'][:32]}:{data['nt_response'][32:]}"
+        text_username = f"{data['username']}@{data['domain']}"
+        text = f"{text_username}:{data['challenge']}:{data['nt_response'][:32]}:{data['nt_response'][32:]}"
     elif 'hash_v1' in packet['type']:
-        key = f"{data['username']}::{data['domain']}"
-        text = f"{key}:{data['lm_response']}:{data['nt_response']}:{data['challenge']}"
+        text_username = f"{data['username']}@{data['domain']}"
+        text = f"{text_username}:{data['lm_response']}:{data['nt_response']}:{data['challenge']}"
     elif 'lm_response' in packet['type']:
-        key = f"{data['username']}::{data['domain']}"
         text = f"{data['lm_response']}"
 
-    return key+packet['type'], text
+    return key.lower(), text

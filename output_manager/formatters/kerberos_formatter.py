@@ -30,17 +30,17 @@ def sort_kerberos_type(packets:list, unique, machine, hash_type):
 def asreq_format(data:dict):
     hash_data = f"$krb5pa${data['etype']}${data['cname']}${data['realm']}${data['cipher']}"
     hash_id = f"$krb5pa${data['etype']}${data['cname']}${data['realm']}"
-    return hash_id, hash_data
+    return hash_id.lower(), hash_data
 
 def asrep_format(data:dict):
     hash_data = f"$krb5asrep${data['etype']}${data['cname']}@{data['realm']}:{data['cipher'][:24]}${data['cipher'][24:]}"
     hash_id = f"$krb5asrep${data['etype']}${data['cname']}@{data['realm']}"
-    return hash_id, hash_data
+    return hash_id.lower(), hash_data
 
 def tgsrep_format(data:dict):
-    hash_id = f"$krb5tgs${data['etype']}$*{data['cname']}${data['realm']}"
+    hash_id = f"$krb5tgs${data['etype']}$*{data['sname']}${data['realm']}"
     if data['etype'] == 23:
-        hash_data = f"$krb5tgs${data['etype']}$*{data['cname']}${data['realm']}${data['sname']}*${data['cipher'][:32]}${data['cipher'][32:]}"
+        hash_data = f"$krb5tgs${data['etype']}$*some_domain_user${data['realm']}${data['sname']}*${data['cipher'][:32]}${data['cipher'][32:]}"
     else:
         hash_data = f"$krb5tgs${data['etype']}${data['sname']}${data['realm']}${data['cipher'][:24]}${data['cipher'][24:]}"
-    return hash_id, hash_data
+    return hash_id.lower(), hash_data
