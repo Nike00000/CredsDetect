@@ -84,8 +84,8 @@ def print_results(folder:str, task_name:str, packets:list):
         unique_ntlm_hashes = sort_ntlm_type(join_ntlm_packets, True, False, ntlm_type)
         hashcat_type = ntlm_types_dict.get(ntlm_type, 'no')
         # write in file
-        write_in_file(unique_ntlm_hashes, f"{task_name}_{ntlm_type}_m_{hashcat_type}.txt", task_folder)
-        write_in_file(all_ntlm_hashes, f"{task_name}_all_{ntlm_type}_m_{hashcat_type}.txt", task_folder)
+        write_in_file(unique_ntlm_hashes, f"{task_name}_NetNTLM_{ntlm_type}_m_{hashcat_type}.txt", task_folder)
+        write_in_file(all_ntlm_hashes, f"{task_name}_all_NetNTLM_{ntlm_type}_m_{hashcat_type}.txt", task_folder)
         #statistic
         hashes_tab_list.append(['NetNTLM',
                                 ntlm_type,

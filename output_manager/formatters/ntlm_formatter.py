@@ -48,7 +48,7 @@ def get_ntlm_data_str(packet:dict):
     if 'nt_response' in packet['type']:
         text = f"username: {data['username']}\nlm_response: {data['lm_response']}\nnt_response: {data['nt_response']}"
     elif 'hash_v2' in packet['type']:
-        text_username = f"{data['username']}@{data['domain']}"
+        text_username = f"{data['username']}::{data['domain']}"
         text = f"{text_username}:{data['challenge']}:{data['nt_response'][:32]}:{data['nt_response'][32:]}"
     elif 'hash_v1' in packet['type']:
         text_username = f"{data['username']}@{data['domain']}"

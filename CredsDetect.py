@@ -2,7 +2,6 @@ import multiprocessing
 import datetime
 import sys
 
-from progress.colors import white
 from tqdm import tqdm
 import argparse
 from worker.process_file import *
@@ -123,6 +122,8 @@ if __name__ == "__main__":
                             pbar.update(1)
                             tqdm.write(f"[✓] {file_path} completed ({processed_files}/{count_files}).")
                         else:
+                            if len(current_results) == 0:
+                                continue
                             global_result_data.extend(current_results)
                             if args.current:
                                 show_str = print_current_results(current_results, shown_unique_data_id)
