@@ -28,7 +28,7 @@ def sort_kerberos_type(packets:list, unique, machine, hash_type):
     return results
 
 def asreq_format(data:dict):
-    hash_data = f"$krb5pa${data['etype']}${data['cname']}${data['realm']}$${data['cipher']}"
+    hash_data = f"$krb5pa${data['etype']}${data['cname']}${data['realm']}${data['cipher']}"
     hash_id = f"$krb5pa${data['etype']}${data['cname']}${data['realm'].split('.')[0]}"
     return hash_id.lower(), hash_data
 
