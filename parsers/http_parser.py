@@ -28,11 +28,9 @@ def http_authorization(packet):
 def http_type_auth(authorization):
     auth_type = str(authorization).split(' ')[0]
     auth_data = str(authorization).split(' ')[1]
+
     auth_data_decode = base64.b64decode(auth_data).hex()
-    if 'Kerberos'.lower() in auth_type.lower():
-        # TODO
-        return None, None, None
-    elif 'Basic'.lower() in auth_type.lower():
+    if 'Basic'.lower() in auth_type.lower():
         auth_data_decode = base64.b64decode(auth_data).decode('utf-8')
         data = http_auth_basic(auth_data_decode)
         return 'ClearText', 'user:pass', data
@@ -40,6 +38,7 @@ def http_type_auth(authorization):
         data_type, data = http_auth_ntlm(auth_data_decode)
         return 'NetNTLM', data_type, data
     else:
+        print(auth_type.lower())
         return None, None, None
 
 def http_auth_basic(auth_data):

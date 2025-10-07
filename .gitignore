@@ -23,6 +23,7 @@ results
 *.egg-info/
 .installed.cfg
 *.egg
+.\parsers\asn1_parser.py
 
 # IDE
 .vscode/
