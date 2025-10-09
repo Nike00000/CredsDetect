@@ -38,7 +38,6 @@ def http_type_auth(authorization):
         data_type, data = http_auth_ntlm(auth_data_decode)
         return 'NetNTLM', data_type, data
     else:
-        print(auth_type.lower())
         return None, None, None
 
 def http_auth_basic(auth_data):

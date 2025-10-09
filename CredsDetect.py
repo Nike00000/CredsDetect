@@ -1,5 +1,6 @@
 import multiprocessing
 import datetime
+import os.path
 import sys
 
 from tqdm import tqdm
@@ -35,7 +36,11 @@ if __name__ == "__main__":
         if os.path.isfile(args.input):
             input_files = [args.input]
         else:
-            print(f"Path {args.input} does not exist")
+            print(f"[!] Path {args.input} does not exist")
+            sys.exit(1)
+    if len(input_files) == 0:
+        print(f"[!] Files not found")
+        sys.exit(1)
     #Count files
     count_files = len(input_files)
     print(f"{count_files} files were found in the directory {input_folder}")
@@ -86,6 +91,10 @@ if __name__ == "__main__":
 
     #Taskname
     task_name = str(datetime.datetime.now()).replace(' ', '_').replace(':', '')
+    if input_folder != "":
+        task_name = f"{os.path.basename(input_folder)}__{task_name}"
+    else:
+        task_name = f"{os.path.basename(input_files[0])}__{task_name}"
     if not args.name is None:
         task_name = args.name
     #Start processing

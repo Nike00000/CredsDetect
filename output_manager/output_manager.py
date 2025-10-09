@@ -33,6 +33,12 @@ def print_results(folder:str, task_name:str, packets:list):
     if not os.path.exists(task_folder):
         return
 
+    all_task_folder = os.path.join(task_folder, 'all')
+    if not os.path.exists(all_task_folder):
+        os.mkdir(all_task_folder)
+    if not os.path.exists(all_task_folder):
+        return
+
     find_all_results = list()
     find_unique_results = list()
 
@@ -45,6 +51,8 @@ def print_results(folder:str, task_name:str, packets:list):
                               'asreq_18': '19900',
                               'asreq_23': '7500',
                               'asrep_23': '18200',
+                              'asrep_17': '32100',
+                              'asrep_18': '32200',
                               'tgsrep_17': '19600',
                               'tgsrep_18': '19700',
                               'tgsrep_23': '13100'}
@@ -61,7 +69,7 @@ def print_results(folder:str, task_name:str, packets:list):
             hashcat_type = kerberos_hashcat_types.get(hash_type, 'no')
             #write in file
             write_in_file(unique_krb_hashes, f"{task_name}_{hash_type}_m_{hashcat_type}.txt", task_folder)
-            write_in_file(all_krb_hashes,f"{task_name}_all_{hash_type}_m_{hashcat_type}.txt", task_folder)
+            write_in_file(all_krb_hashes,f"{task_name}_all_{hash_type}_m_{hashcat_type}.txt", all_task_folder)
             #statistic
             hashes_tab_list.append(['Kerberos',
                                     hash_type,
@@ -85,7 +93,7 @@ def print_results(folder:str, task_name:str, packets:list):
         hashcat_type = ntlm_types_dict.get(ntlm_type, 'no')
         # write in file
         write_in_file(unique_ntlm_hashes, f"{task_name}_NetNTLM_{ntlm_type}_m_{hashcat_type}.txt", task_folder)
-        write_in_file(all_ntlm_hashes, f"{task_name}_all_NetNTLM_{ntlm_type}_m_{hashcat_type}.txt", task_folder)
+        write_in_file(all_ntlm_hashes, f"{task_name}_all_NetNTLM_{ntlm_type}_m_{hashcat_type}.txt", all_task_folder)
         #statistic
         hashes_tab_list.append(['NetNTLM',
                                 ntlm_type,

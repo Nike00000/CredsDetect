@@ -19,6 +19,8 @@ def asreq_packet(as_req_layer):
     try:
         data = dict()
         data['cname'] = as_req_layer.req_body_element.cname_element.cname_string_tree.CNameString
+        if type(data['cname']) == list:
+            data['cname'] = '/'.join(data['cname'])
         data['realm'] = as_req_layer.req_body_element.realm
         pa_data_count = int(as_req_layer.padata)
         for index in range(pa_data_count):
@@ -36,8 +38,8 @@ def asrep_packet(as_rep_layer):
         data = dict()
         data['cname'] = as_rep_layer.cname_element.cname_string_tree.CNameString
         data['realm'] = as_rep_layer.crealm
-        data['etype'] = int(as_rep_layer.ticket_element.enc_part_element.etype)
-        data['cipher'] = str(as_rep_layer.ticket_element.enc_part_element.cipher).replace(':', '')
+        data['etype'] = int(as_rep_layer.enc_part_element.etype)
+        data['cipher'] = str(as_rep_layer.enc_part_element.cipher).replace(':', '')
         return f'asrep_{data['etype']}', data
     except:
         return None, None
