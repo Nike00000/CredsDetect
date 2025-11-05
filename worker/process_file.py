@@ -29,6 +29,7 @@ def process_chunk(packets, filename):
             if 'layers' not in packet:
                 continue
             parse_packet = dict()
+            parse_packet['filename'] = filename
             if 'timestamp' in packet:
                 parse_packet['timestamp'] = int(packet['timestamp'])
             layers = packet['layers']
