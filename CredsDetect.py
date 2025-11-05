@@ -129,14 +129,13 @@ if __name__ == "__main__":
                         file_path, status, current_results = queue.get(timeout=timeout)  # wait the chunk of results
                         if status == 'Started':
                             tqdm.write(f"[*] Started processing: {file_path}")
-                        if len(current_results) == 0:
-                            continue
-                        global_result_data.extend(current_results)
-                        if args.current:
-                            show_str = print_current_results(current_results, shown_unique_data_id)
-                            tqdm.write(show_str)
-                        else:
-                            tqdm.write(f"[+] Found {len(current_results)} packets")
+                        if len(current_results) > 0:
+                            global_result_data.extend(current_results)
+                            if args.current:
+                                show_str = print_current_results(current_results, shown_unique_data_id)
+                                tqdm.write(show_str)
+                            else:
+                                tqdm.write(f"[+] Found {len(current_results)} packets")
                         if status == 'Done':
                             processed_files += 1  # file processing completed
                             pbar.update(1)
