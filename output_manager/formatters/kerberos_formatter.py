@@ -12,8 +12,8 @@ def get_kerberos_data_str(packet:dict):
 def sort_kerberos_type(packets:list, unique, machine, hash_type):
     results = list()
     hash_id_list = list()
-    packets_by_time = sorted(packets, key=lambda x: x['time'], reverse=True)
-    for packet in packets_by_time:
+    sorted_packets = sorted(packets, key=lambda x: x['timestamp'], reverse=True)
+    for packet in sorted_packets:
         if not machine and '$' in packet['data']['cname']:
             continue
         if not packet['type'] == hash_type:

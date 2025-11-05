@@ -2,7 +2,7 @@ def find_ntlm_packet(sorted_ntlm_dict: dict):
     results = list()
 
     for session_id in sorted_ntlm_dict.keys():
-        sorted_ntlm_list = sorted(sorted_ntlm_dict[session_id], key=lambda x: x['time'])
+        sorted_ntlm_list = sorted(sorted_ntlm_dict[session_id], key=lambda x: x['timestamp'])
         challenge = None
         for ntlm_packet in sorted_ntlm_list:
             if 'challenge' in ntlm_packet['type']:
@@ -22,8 +22,8 @@ def find_ntlm_packet(sorted_ntlm_dict: dict):
 def sort_ntlm_type(ntlm_packets: list, unique, machine, hash_type):
     results = list()
     unique_key_list = list()
-    ntlm_packets_by_time = sorted(ntlm_packets, key=lambda x: x['time'], reverse=True)
-    for ntlm_packet in ntlm_packets_by_time:
+    sorted_packets = sorted(ntlm_packets, key=lambda x: x['timestamp'], reverse=True)
+    for ntlm_packet in sorted_packets:
         if hash_type != ntlm_packet['type']:
             continue
         if not machine:

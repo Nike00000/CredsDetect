@@ -60,6 +60,7 @@ if __name__ == "__main__":
         tshark_version = check_tshark_installed()
         if not tshark_version is None:
             print(f"{tshark_version} detected in the environment")
+            tshark_path = "tshark"
         else:
             print("Tshark was not detected in the environment")
             sys.exit(1)
@@ -68,7 +69,9 @@ if __name__ == "__main__":
     if not args.threads is None:
         count_processes = min(len(input_files), args.threads)
     #Filter protocols
-    default_protocols = ['kerberos',
+    default_protocols = ['kerberos.as_req_element',
+                         'kerberos.as_rep_element',
+                         'kerberos.tgs_rep_element',
                          'ntlmssp',
                          'http.proxy_authenticate',
                          'http.proxy_authorization',
@@ -90,7 +93,7 @@ if __name__ == "__main__":
         exit(1)
 
     #Taskname
-    task_name = str(datetime.datetime.now()).replace(' ', '_').replace(':', '')
+    task_name = str(datetime.now()).replace(' ', '_').replace(':', '')
     if input_folder != "":
         task_name = f"{os.path.basename(input_folder)}__{task_name}"
     else:
@@ -116,29 +119,29 @@ if __name__ == "__main__":
                 task = pool.apply_async(
                     process_file,
                     args=(file_path, queue, filter_protocols, tshark_path),
-                    error_callback=lambda e, fp=file_path:
-                    tqdm.write(f"[!] Error processing {fp}: {e}"))
+                    error_callback=lambda lambda_e, fp=file_path:
+                    tqdm.write(f"[!] Error processing {fp}: {lambda_e}"))
                 tasks.append(task)
             with tqdm(total=count_files, desc='Processing files', ncols=100) as pbar:
                 timeout = 10
                 while processed_files < count_files:
                     try:
-                        file_path, current_results = queue.get(timeout=timeout)  # wait the chunk of results
-                        if current_results == 'Started':
+                        file_path, status, current_results = queue.get(timeout=timeout)  # wait the chunk of results
+                        if status == 'Started':
                             tqdm.write(f"[*] Started processing: {file_path}")
-                        elif current_results == 'Done':
+                        if len(current_results) == 0:
+                            continue
+                        global_result_data.extend(current_results)
+                        if args.current:
+                            show_str = print_current_results(current_results, shown_unique_data_id)
+                            tqdm.write(show_str)
+                        else:
+                            tqdm.write(f"[+] Found {len(current_results)} packets")
+                        if status == 'Done':
                             processed_files += 1  # file processing completed
                             pbar.update(1)
                             tqdm.write(f"[✓] {file_path} completed ({processed_files}/{count_files}).")
-                        else:
-                            if len(current_results) == 0:
-                                continue
-                            global_result_data.extend(current_results)
-                            if args.current:
-                                show_str = print_current_results(current_results, shown_unique_data_id)
-                                tqdm.write(show_str)
-                            else:
-                                tqdm.write(f"[+] Found {len(current_results)} packets")
+
                     except Exception as e:
                         if "" == str(e):
                             if all(task.ready() for task in tasks):

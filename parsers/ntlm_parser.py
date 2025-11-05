@@ -23,7 +23,7 @@ def decode_word(data_bytes, length_position, length_size, offset_position, offse
 
 def ntlm_tcp_payload_parse(packet):
     try:
-        payload = packet.tcp.payload
+        payload = packet['tcp']['tcp_tcp_payload']
         payload_str = str(payload).replace(':', '')
         ntlm_type, ntlm_data = ntlm_parse(payload_str)
         if ntlm_type is None or ntlm_data is None:

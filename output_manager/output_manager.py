@@ -129,8 +129,8 @@ def print_results(folder:str, task_name:str, packets:list):
     print(tabulate(ct_tab_list, headers=['protocol', 'unique', 'all']))
     print()
 
-    write_to_csv(find_unique_results, 'unique_results.csv', task_folder)
-    write_to_csv(find_all_results, 'all_results.csv', task_folder)
+    write_to_csv(find_unique_results, f'unique_results_{task_name}.csv', task_folder)
+    write_to_csv(find_all_results, f'all_results_{task_name}.csv', task_folder)
 
     print(f'All results save in {task_folder}\n\n')
 

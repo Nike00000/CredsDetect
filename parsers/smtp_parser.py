@@ -9,14 +9,14 @@ def decode_base64_string(base64_string):
 def smtp_packet(packet):
     try:
         data = dict()
-        layer = packet.smtp
+        layer = packet['smtp']
         try:
-            data['user'] = decode_base64_string(layer.username)
+            data['user'] = decode_base64_string(layer['smtp_smtp_auth_username'])
             return 'SMTP', 'ClearText', 'user', data
         except:
             pass
         try:
-            data['pass'] = decode_base64_string(layer.password)
+            data['pass'] = decode_base64_string(layer['smtp_smtp_auth_password'])
             return 'SMTP', 'ClearText', 'pass', data
         except:
             pass

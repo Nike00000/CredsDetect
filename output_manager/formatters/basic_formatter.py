@@ -13,7 +13,7 @@ def find_basic_packet(sorted_ct_dict: dict):
     results = list()
 
     for session_id in sorted_ct_dict.keys():
-        sorted_list = sorted(sorted_ct_dict[session_id], key=lambda x: x['time'])
+        sorted_list = sorted(sorted_ct_dict[session_id], key=lambda x: x['timestamp'])
         user_packet = None
         for packet in sorted_list:
             if packet['type'] == 'user':

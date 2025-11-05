@@ -3,7 +3,7 @@ import base64
 
 def http_proxy_authenticate(packet):
     try:
-        authenticate = str(packet.http.proxy_authenticate)
+        authenticate = packet['http']['http_http_proxy_authenticate']
         auth, type_data, data = http_type_auth(authenticate)
         return 'HTTP.ProxyAuthenticate', auth, type_data, data
     except:
@@ -11,7 +11,7 @@ def http_proxy_authenticate(packet):
 
 def http_proxy_authorization(packet):
     try:
-        authorization = str(packet.http.proxy_authorization)
+        authorization = packet['http']['http_http_proxy_authorization']
         auth, type_data, data = http_type_auth(authorization)
         return 'HTTP.ProxyAuthorization', auth, type_data, data
     except:
@@ -19,7 +19,7 @@ def http_proxy_authorization(packet):
 
 def http_authorization(packet):
     try:
-        authorization = packet.http.authorization
+        authorization = packet['http']['http_http_authorization']
         auth, type_data, data = http_type_auth(authorization)
         return 'HTTP.Authorization', auth, type_data, data
     except:
