@@ -93,18 +93,20 @@ def process_file(file_path, queue_process, filter_protocols, tshark_path):
                     continue
             results = process_chunk(packets, file_path)
             queue_process.put((file_path, 'Done', results))
-        else:
-            process.terminate()
     except Exception as e:
         raise e
     finally:
-        if process and process.poll() is None:
-            try:
+        try:
+            process.wait(timeout=5)
+            if process.poll() is not None:
+                process.stdout.close()
+                process.stderr.close()
                 process.terminate()
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
-            except Exception as e:
-                raise
-        queue_process.put((file_path, "Done", ''))
+            process.kill()
+        except Exception as e:
+            process.kill()
+            process.wait()
+            raise
+        finally:
+            queue_process.put((file_path, "Error", ''))
+        pass

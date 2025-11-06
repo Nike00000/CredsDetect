@@ -136,10 +136,10 @@ if __name__ == "__main__":
                                 tqdm.write(show_str)
                             else:
                                 tqdm.write(f"[+] Found {len(current_results)} packets")
-                        if status == 'Done':
+                        if status == 'Done' or status == 'Error':
                             processed_files += 1  # file processing completed
                             pbar.update(1)
-                            tqdm.write(f"[✓] {file_path} completed ({processed_files}/{count_files}).")
+                            tqdm.write(f"[✓] {file_path} completed")
 
                     except Exception as e:
                         if "" == str(e):
