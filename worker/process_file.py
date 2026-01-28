@@ -1,6 +1,4 @@
 import json
-from datetime import datetime
-
 import subprocess
 
 from parsers.kerberos_parser import *
@@ -10,68 +8,13 @@ from parsers.imap_parser import *
 from parsers.smtp_parser import *
 from parsers.http_parser import *
 from parsers.ftp_parser import *
-
-unknown = 'unknown'
-functions_list = [kerberos_packet,
-                  ntlm_tcp_payload_parse,
-                  http_authorization,
-                  http_proxy_authorization,
-                  http_proxy_authenticate,
-                  pop_packet,
-                  imap_packet,
-                  smtp_packet,
-                  ftp_parse]
-
-def process_chunk(packets, filename):
-    chunk_results = []
-    for packet in packets:
-        try:
-            if 'layers' not in packet:
-                continue
-            parse_packet = dict()
-            parse_packet['filename'] = filename
-            if 'timestamp' in packet:
-                parse_packet['timestamp'] = int(packet['timestamp'])
-            layers = packet['layers']
-            if 'frame' in layers:
-                parse_packet['time'] = datetime.fromisoformat(layers['frame']['frame_frame_time_utc'])
-                parse_packet['number'] = layers['frame']['frame_frame_number']
-            else:
-                continue
-            if 'eth' in layers:
-                parse_packet['src_mac'] = layers['eth'].get('eth_eth_src', unknown)
-                parse_packet['dst_mac'] = layers['eth'].get('eth_eth_dst', unknown)
-            if 'ip' in layers:
-                parse_packet['src_ip'] = layers['ip'].get('ip_ip_src', unknown)
-                parse_packet['dst_ip'] = layers['ip'].get('ip_ip_dst', unknown)
-                #Session
-                session_id1 = min(parse_packet['src_ip'], parse_packet['dst_ip'])
-                session_id2 = max(parse_packet['src_ip'], parse_packet['dst_ip'])
-                parse_packet['session_id'] = '-'.join([session_id1, session_id2])
-            else:
-                continue
-            if 'tcp' in layers:
-                parse_packet['src_port'] = layers['tcp'].get('tcp_tcp_srcport', unknown)
-                parse_packet['dst_port'] = layers['tcp'].get('tcp_tcp_dstport', unknown)
-            if 'udp' in layers:
-                parse_packet['src_port'] = layers['udp'].get('udp_udp_srcport', unknown)
-                parse_packet['dst_port'] = layers['udp'].get('udp_udp_dstport', unknown)
-
-            for func_parse in functions_list:
-                protocol, auth, data_type, data = func_parse(layers)
-                if not data_type is None and not data is None:
-                    parse_packet['protocol'] = protocol
-                    parse_packet['auth'] = auth
-                    parse_packet['type'] = data_type
-                    parse_packet['data'] = data
-                    chunk_results.append(parse_packet)
-                    break
-        except Exception as e:
-            continue
-    return chunk_results
+from dto.kerberos_data import AsreqKerberos, AsrepKerberos, TgsrepKerberos
+from dto.net_ntlm_data import ChallengeNetNTLM, ResponseNetNTLM
+from dto.user_pass_data import UserPassData
+from worker.processing_stats import FileStatus
 
 def process_file(file_path, queue_process, filter_protocols, tshark_path):
-    queue_process.put((file_path, 'Started', ''))
+    queue_process.put((file_path, FileStatus.ACTIVE, ''))
     command = [
         tshark_path,
         '-r', file_path,
@@ -85,28 +28,17 @@ def process_file(file_path, queue_process, filter_protocols, tshark_path):
         output, errors = process.communicate()
         if process.returncode == 0:
             text_output = output.decode('utf-8', errors='replace')
-            for line in text_output.splitlines():
-                try:
-                    packet = json.loads(line)
-                    packets.append(packet)
-                except Exception as e:
-                    continue
-            results = process_chunk(packets, file_path)
-            queue_process.put((file_path, 'Done', results))
+            queue_process.put((file_path, FileStatus.DONE, text_output))
     except Exception as e:
         raise e
     finally:
         try:
-            process.wait(timeout=5)
-            if process.poll() is not None:
-                process.stdout.close()
-                process.stderr.close()
-                process.terminate()
-            process.kill()
+            if process is not None:
+                process.wait(timeout=5)
+                if process.poll() is not None:
+                    process.stdout.close()
+                    process.stderr.close()
+                    process.terminate()
+                process.kill()
         except Exception as e:
-            process.kill()
-            process.wait()
             raise
-        finally:
-            queue_process.put((file_path, "Error", ''))
-        pass

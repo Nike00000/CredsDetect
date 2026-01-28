@@ -1,57 +1,57 @@
-from parsers.ntlm_parser import ntlm_parse
+from dto.enums import UserPassProtocolEnum, HTTPTypeEnum
 import base64
+    
+class HTTPParser:
 
-def http_proxy_authenticate(packet):
-    try:
-        authenticate = packet['http']['http_http_proxy_authenticate']
-        auth, type_data, data = http_type_auth(authenticate)
-        return 'HTTP.ProxyAuthenticate', auth, type_data, data
-    except:
-        return None, None, None, None
+    @staticmethod
+    def extract_proxy_authenticate(packet) -> str:
+        try:
+            authenticate = packet['layers']['http']['http_http_proxy_authenticate']
+            return authenticate
+        except:
+            raise TypeError("http_http_proxy_authenticate don't found in packet")
+        
+    @staticmethod
+    def extract_proxy_authorization(packet) -> str:
+        try:
+            authenticate = packet['layers']['http']['http_http_proxy_authorization']
+            return authenticate
+        except:
+            raise TypeError("http_http_proxy_authorization don't found in packet")
 
-def http_proxy_authorization(packet):
-    try:
-        authorization = packet['http']['http_http_proxy_authorization']
-        auth, type_data, data = http_type_auth(authorization)
-        return 'HTTP.ProxyAuthorization', auth, type_data, data
-    except:
-        return None, None, None, None
 
-def http_authorization(packet):
-    try:
-        authorization = packet['http']['http_http_authorization']
-        auth, type_data, data = http_type_auth(authorization)
-        return 'HTTP.Authorization', auth, type_data, data
-    except:
-        return None, None, None, None
-
-def http_type_auth(authorization):
-    auth_type = str(authorization).split(' ')[0]
-    auth_data = str(authorization).split(' ')[1]
-
-    auth_data_decode = base64.b64decode(auth_data).hex()
-    if 'Basic'.lower() in auth_type.lower():
-        auth_data_decode = base64.b64decode(auth_data).decode('utf-8')
-        data = http_auth_basic(auth_data_decode)
-        return 'ClearText', 'user:pass', data
-    elif 'NTLM'.lower() in auth_type.lower():
-        data_type, data = http_auth_ntlm(auth_data_decode)
-        return 'NetNTLM', data_type, data
-    else:
-        return None, None, None
-
-def http_auth_basic(auth_data):
-    try:
-        data = dict()
-        data['user'] = auth_data.split(':')[0]
-        data['pass'] = auth_data.split(':')[1]
-
-        return data
-    except:
-        return None
-
-def http_auth_ntlm(auth_data):
-    try:
-        return ntlm_parse(auth_data)
-    except:
-        return None, None
+    @staticmethod
+    def extract_http_authorization(packet) -> str:
+        try:
+            authenticate = packet['layers']['http']['http_http_authorization']
+            return authenticate
+        except:
+            raise TypeError("http_http_authorization don't found in packet")
+        
+    @staticmethod
+    def get_type_auth(authorization:str) -> HTTPTypeEnum:
+        auth_type = str(authorization).split(' ')[0]
+        if 'Basic'.lower() in auth_type.lower():
+            return HTTPTypeEnum.BASIC
+        elif 'NTLM'.lower() in auth_type.lower():
+            return HTTPTypeEnum.NTLM
+        else:
+            raise TypeError('Unknown type http authorization')
+        
+    @staticmethod
+    def get_ntlm(authorization:str) -> HTTPTypeEnum:
+        auth_data = str(authorization).split(' ')[1]
+        auth_data_decode = base64.b64decode(auth_data).hex()
+        return auth_data_decode
+    
+    @staticmethod
+    def get_basic_auth_user(authorization:str) -> UserPassProtocolEnum:
+        auth_data_encode = authorization.split(' ')[1]
+        auth_data_decode = base64.b64decode(auth_data_encode).decode('utf-8')
+        return auth_data_decode.split(':')[0]
+    
+    @staticmethod
+    def get_basic_auth_pass(authorization:str) -> UserPassProtocolEnum:
+        auth_data_encode = authorization.split(' ')[1]
+        auth_data_decode = base64.b64decode(auth_data_encode).decode('utf-8')
+        return auth_data_decode.split(':')[1]
