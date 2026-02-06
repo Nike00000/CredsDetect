@@ -132,8 +132,8 @@ class ProcessingManager:
     def _handle_file_completed(self, file_path: str, 
                           str_results: str) -> None:
         results: List[BaseData] = []
-        if self.current_result:
-            for line in str_results.splitlines():
+
+        for line in str_results.splitlines():
                 try:
                     packet = json.loads(line)
                     if 'layers' in packet:
@@ -147,12 +147,14 @@ class ProcessingManager:
                 except Exception as e:
                     continue
 
+        if self.current_result:
             for base_data in results:
                 if base_data.is_user():
                     session = f"{base_data.src_ip}:{base_data.src_port} -> {base_data.dst_ip}:{base_data.dst_port}"
                     text = f"[dim][*] From the session {session} file {base_data.filename} protocol {base_data.protocol()} auth with {base_data.authentication_protocol} found data:[/dim]\n"
                     self.console.print(f"{text}{base_data.data()}", highlight=False)
-            self.results.extend(list(results))
+        
+        self.results.extend(list(results))
         
 
 
