@@ -42,7 +42,7 @@ class NTLMContainer:
             case _:
                 raise TypeError(f"Unsupported type: {type(data)}")
     
-    def get_hash(self, type_response: NTLMResponseEnum) -> UniqueContainer[ResponseNetNTLM]:
+    def get_hash(self, type_response: NTLMResponseEnum) -> UniqueContainer[HashNetNTLM]:
         hashes = UniqueContainer[HashNetNTLM]()
         for session_id in self._by_session:
             session_list = sorted(self._by_session[session_id], key=lambda x: x.timestamp)
@@ -51,13 +51,15 @@ class NTLMContainer:
                 if isinstance(data, ChallengeNetNTLM):
                     challenge = data
                 elif isinstance(data, ResponseNetNTLM):
+                    if challenge is None:
+                        continue
                     if type_response == data.version():
                         hashes.append(HashNetNTLM(challenge, data))
         return hashes
 
     def get_all(self):
-        all: List[Union[ChallengeNetNTLM, ResponseNetNTLM]] = []
-        all.extend(self.challenges)
-        all.extend(self.responses[NTLMResponseEnum.RESPONSE_V1].all)
-        all.extend(self.responses[NTLMResponseEnum.RESPONSE_V2].all)
-        return all
+        all_list: List[Union[ChallengeNetNTLM, ResponseNetNTLM]] = []
+        all_list.extend(self.challenges)
+        all_list.extend(self.responses[NTLMResponseEnum.RESPONSE_V1].all)
+        all_list.extend(self.responses[NTLMResponseEnum.RESPONSE_V2].all)
+        return all_list
