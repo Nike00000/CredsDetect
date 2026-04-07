@@ -82,7 +82,7 @@ class AsrepKerberos(BaseData):
         cname_lower = str(self.cname).lower()
         realm_upper = str(self.realm).upper()
         if self.etype == KerberosEtypeEnum.e23:
-            hash_data = f"$krb5asrep${self.etype.value}${cname_lower}@{realm_upper}:{self.cipher}"
+            hash_data = f"$krb5asrep${self.etype.value}${cname_lower}@{realm_upper}:{self.cipher[:32]}${self.cipher[32:]}"
         else:
             hash_data = f"$krb5asrep${self.etype.value}${cname_lower}${realm_upper}${self.cipher[-24:]}${self.cipher[:-24]}"
         
