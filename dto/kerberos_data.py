@@ -38,8 +38,10 @@ class AsreqKerberos(BaseData):
         #$krb5pa$18$hashcat$HASHCATDOMAIN.COM$96c289009b05181bfd32062962740b1b1ce5f74eb12e0266cde74e81094661addab08c0c1a178882c91a0ed89ae4e0e68d2820b9cce69770
         cname_lower = str(self.cname).lower().split('@')[0]
         realm_upper = str(self.realm).upper()
-        if self.etype == 23:
-            return f"$krb5pa${self.etype.value}${cname_lower}${self.realm}${self.cipher[:24]}${self.cipher[24:]}"
+        salt = f"{cname_lower}{realm_upper}"
+        if self.etype == KerberosEtypeEnum.e23:
+            # Move HMAC to the end
+            return f"$krb5pa${self.etype.value}${cname_lower}${self.realm}${salt}${self.cipher[32:]}{self.cipher[:32]}"
         else:
             return f"$krb5pa${self.etype.value}${cname_lower}${realm_upper}${self.cipher}"
         
