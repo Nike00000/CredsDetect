@@ -18,6 +18,7 @@ class NetNTLMExtractor(BaseData):
             self._protocol = ProtocolEnum.TCP.value
         except:
             pass
+
         if  self._payload_bytes != None:
             return
         authorization = None

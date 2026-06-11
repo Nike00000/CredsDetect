@@ -29,7 +29,10 @@ def process_file(file_path, queue_process, filter_protocols, tshark_path):
         if process.returncode == 0:
             text_output = output.decode('utf-8', errors='replace')
             queue_process.put((file_path, FileStatus.DONE, text_output))
+        else:
+            raise ChildProcessError(f"errors: {errors}, output thark: {output}")
     except Exception as e:
+        queue_process.put((file_path, FileStatus.ERROR, e))
         raise e
     finally:
         try:
