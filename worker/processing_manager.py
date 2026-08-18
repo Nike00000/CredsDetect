@@ -78,7 +78,7 @@ class ProcessingManager:
         """Мониторит процесс обработки файлов"""
         with Live(create_dashboard(self.processing_stats, self.results), refresh_per_second=4, console=self.console) as live:
             last_update = datetime.now()
-            update_interval = 0.5
+            update_interval = 0.1
             
             while True:
                 current_time = datetime.now()
