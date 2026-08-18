@@ -8,6 +8,7 @@ class FileStatus(Enum):
     ACTIVE = 'Active'
     ERROR = 'Error'
     DONE = 'Done'
+    DATA = 'Data'
 
 @dataclass
 class FileStats:

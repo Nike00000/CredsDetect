@@ -118,8 +118,10 @@ class ProcessingManager:
         self.processing_stats.update_status(status, filename=file_path)
         if status is FileStatus.ACTIVE:
             self._handle_file_started(file_path)
+        elif status is FileStatus.DATA:
+            self._handle_parse_data(file_path, current_results)
         elif status is FileStatus.DONE:
-            self._handle_file_completed(file_path, current_results)
+            self._handle_file_completed(file_path)
         elif status is FileStatus.ERROR:
             self._handle_file_failed(file_path, current_results)
 
@@ -129,23 +131,26 @@ class ProcessingManager:
     def _handle_file_failed(self, file_path: str, error: str) -> None:
         self.console.print(f"[red][*] Error processing: {file_path} with error:/n {error}[/red]")
 
-    def _handle_file_completed(self, file_path: str, 
-                          str_results: str) -> None:
+    def _handle_file_completed(self, file_path: str, ) -> None:
+        self.console.print(f"[gray][*] File completed: {file_path}")
+
+    def _handle_parse_data(self, file_path: str, 
+                          result_lines: List[str]) -> None:
         results: List[BaseData] = []
 
-        for line in str_results.splitlines():
-                try:
-                    packet = json.loads(line)
-                    if 'layers' in packet:
-                        for data_object in self.data_objects:
-                            try:
-                                data = data_object(packet=packet, filename=file_path)
-                                results.append(data)
-                                break
-                            except Exception as e:
-                                pass
-                except Exception as e:
-                    continue
+        for line in result_lines:
+            try:
+                packet = json.loads(line)
+                if 'layers' in packet:
+                    for data_object in self.data_objects:
+                        try:
+                            data = data_object(packet=packet, filename=file_path)
+                            results.append(data)
+                            break
+                        except Exception as e:
+                            pass
+            except Exception as e:
+                continue
 
         if self.current_result:
             for base_data in results:
