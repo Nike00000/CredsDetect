@@ -54,6 +54,8 @@ def print_ntlm(results:ResultsContainer, folder:str, task_name:str):
     
 
 def print_results(task_folder:str, task_name:str, results:ResultsContainer):
+    all_results = []
+
     userpass_data = results.user_pass_container.get_all()
     for protocol in userpass_data.keys():
         if not len(userpass_data[protocol].unique):
@@ -64,6 +66,7 @@ def print_results(task_folder:str, task_name:str, results:ResultsContainer):
         write_to_csv(data_list=userpass_data[protocol].all,
                      filename=f"all.{protocol.value}.{task_name}.csv".lower(),
                      folder=task_folder)
+        all_results.extend(userpass_data[protocol].all)
 
     #Print results
     print_kerberos(results=results,
@@ -73,6 +76,14 @@ def print_results(task_folder:str, task_name:str, results:ResultsContainer):
     print_ntlm(results=results,
                 folder=task_folder,
                 task_name=task_name)
+
+    all_results.extend(results.kerberos_container.get_all())
+    all_results.extend(results.ntlm_container.get_all())
+
+    write_to_csv(data_list=all_results,
+                 filename=f"all.{task_name}.csv".lower(),
+                 folder=task_folder)
+    
 
 def write_in_file(packets: list[BaseData], filename, folder):
     if packets is None:
