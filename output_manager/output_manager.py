@@ -4,7 +4,8 @@ from containers.results_container import ResultsContainer
 from containers.unique_container import UniqueContainer
 from dto.enums import KerberosEtypeEnum, NTLMResponseEnum
 from dto.base_data import BaseData
-
+from dto.user_pass_data import UserPassData
+from dto.enums import UserPassProtocolEnum
 hashcat_types = {'asreq_17': '19800',
                  'asreq_18': '19900',
                  'asreq_23': '7500',
@@ -18,78 +19,60 @@ hashcat_types = {'asreq_17': '19800',
                  f'ntlm_{NTLMResponseEnum.RESPONSE_V2.value}': '5600'
                  }
 
-def print_unique_container(container:UniqueContainer, folder:str, users_folder: str, all_folder: str, task_name:str, name: str):
+def print_unique_container(container:UniqueContainer, folder:str, task_name:str, name: str):
     hashcat_type = hashcat_types[name]
     all_data = container.all
     users_data = container.users
     unique_data = container.unique
-    write_in_file(all_data, f"{task_name}_{name}_all__m_{hashcat_type}.txt", all_folder)
-    write_in_file(users_data, f"{task_name}_{name}_users__m_{hashcat_type}.txt", users_folder)
-    write_in_file(unique_data, f"{task_name}_{name}_unique__m_{hashcat_type}.txt", folder)
+    write_in_file(all_data, f"all.{name}.{task_name}.txt", folder)
+    write_in_file(users_data, f"users.{name}.{task_name}.txt", folder)
+    write_in_file(unique_data, f"unique.{name}.{task_name}.txt", folder)
 
-def print_kerberos(results:ResultsContainer, folder:str, users_folder: str, all_folder: str, task_name:str):
+def print_kerberos(results:ResultsContainer, folder:str, task_name:str):
     for etype in KerberosEtypeEnum:
         print_unique_container(container=results.kerberos_container.asreq[etype],
                                folder=folder,
-                               users_folder=users_folder,
-                               all_folder=all_folder,
                                task_name=task_name,
                                name=f'asreq_{etype.value}')
         print_unique_container(container=results.kerberos_container.asrep[etype],
                                folder=folder,
-                               users_folder=users_folder,
-                               all_folder=all_folder,
                                task_name=task_name,
                                name=f'asrep_{etype.value}')
         print_unique_container(container=results.kerberos_container.tgsrep[etype],
                                folder=folder,
-                               users_folder=users_folder,
-                               all_folder=all_folder,
                                task_name=task_name,
                                name=f'tgsrep_{etype.value}')
     
 
-def print_ntlm(results:ResultsContainer, folder:str, users_folder: str, all_folder: str, task_name:str):
+def print_ntlm(results:ResultsContainer, folder:str, task_name:str):
     for ntlm_type in NTLMResponseEnum:
         print_unique_container(container=results.ntlm_container.get_hash(ntlm_type),
                                folder=folder,
-                               users_folder=users_folder,
-                               all_folder=all_folder,
                                task_name=task_name,
                                name=f'ntlm_{ntlm_type.value}')
         
     
 
 def print_results(task_folder:str, task_name:str, results:ResultsContainer):
-    #Create Users folder
-    users_task_folder = os.path.join(task_folder, 'users')
-    if not os.path.exists(users_task_folder):
-        os.mkdir(users_task_folder)
-    if not os.path.exists(users_task_folder):
-        return
-    #Create All folder
-    all_task_folder = os.path.join(task_folder, 'all')
-    if not os.path.exists(all_task_folder):
-        os.mkdir(all_task_folder)
-    if not os.path.exists(all_task_folder):
-        return
+    userpass_data = results.user_pass_container.get_all()
+    for protocol in userpass_data.keys():
+        if not len(userpass_data[protocol].unique):
+            continue
+        write_to_csv(data_list=userpass_data[protocol].unique,
+                     filename=f"unique.{protocol.value}.{task_name}.csv".lower(),
+                     folder=task_folder)
+        write_to_csv(data_list=userpass_data[protocol].all,
+                     filename=f"all.{protocol.value}.{task_name}.csv".lower(),
+                     folder=task_folder)
+
     #Print results
     print_kerberos(results=results,
                    folder=task_folder,
-                   users_folder=users_task_folder,
-                   all_folder=all_task_folder,
                    task_name=task_name)
 
     print_ntlm(results=results,
                 folder=task_folder,
-                users_folder=users_task_folder,
-                all_folder=all_task_folder,
                 task_name=task_name)
-
-
-    all_results = results.get_all()
-
-    write_to_csv(all_results, f'all_results_{task_name}.csv', all_task_folder)
 
 def write_in_file(packets: list[BaseData], filename, folder):
     if packets is None:
@@ -122,12 +105,11 @@ def write_to_csv(data_list:list[BaseData], filename:str, folder:str):
                          'Name',
                          'Data'])
         for data in data_list:
-            data_str = data.data()
             row = [data.filename,
                    f"{data.src_ip}:{data.src_port}",
                    f"{data.dst_ip}:{data.dst_port}",
                    data.protocol(),
                    data.authentication_protocol,
                    data.name,
-                   data_str]
+                   data.data()]
             writer.writerow(row)

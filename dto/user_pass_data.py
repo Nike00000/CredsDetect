@@ -6,7 +6,7 @@ from parsers.pop_parser import POPParser
 from parsers.imap_parser import IMAPParser
 from parsers.http_parser import HTTPParser
 from parsers.smtp_parser import SMTPParser
-
+from parsers.ldap_parser import LDAPParser
 @dataclass
 class UserPassData(BaseData):
     authentication_protocol: str = AuthenticationProtocolEnum.CLEARTEXT.value
@@ -16,6 +16,17 @@ class UserPassData(BaseData):
     userpass_protocol: UserPassProtocolEnum = None
     def __init__(self, packet, filename):
         super().__init__(packet=packet, filename=filename)
+        #LDAP
+        try:
+            self.userpass_protocol = UserPassProtocolEnum.LDAP
+            self.username = LDAPParser.get_username(packet=packet)
+            self.password = LDAPParser.get_password(packet=packet)
+            if not (self.username and self.password):
+                raise TypeError('No simple data for LDAP protocol')
+            return
+        except Exception as e:
+            pass
+
         #POP
         try:
             self.userpass_protocol = UserPassProtocolEnum.POP
@@ -109,9 +120,26 @@ class UserPassData(BaseData):
     def protocol(self) -> str:
         return self.userpass_protocol.value
     
-    
     def key(self) -> str:
         return f"{self.protocol()}_{self.dst_ip}_{self.data()}"
+
+    @property
+    def is_full(self):
+        if self.username and self.password:
+            return True
+        return False
+
+    @property
+    def is_only_username(self):
+        if self.username and not self.password:
+            return True
+        return False
+
+    @property
+    def is_only_password(self):
+        if not self.username and self.password:
+            return True
+        return False
 
     def data(self) -> str:
         text = 'no data'

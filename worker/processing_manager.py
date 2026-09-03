@@ -13,6 +13,7 @@ import json
 from dto.kerberos_data import AsreqKerberos, AsrepKerberos, TgsrepKerberos
 from dto.net_ntlm_data import ChallengeNetNTLM, ResponseNetNTLM
 from dto.user_pass_data import UserPassData
+from output_manager.output_manager import print_results
 
 class ProcessingManager:
 
@@ -23,8 +24,15 @@ class ProcessingManager:
                 TgsrepKerberos,
                 UserPassData]
 
-    def __init__(self, count_processes: int, input_files: List[str], 
-                 filter_protocols: List[str], tshark_path: str, current_result: bool):
+    def __init__(self,
+                 count_processes: int,
+                 input_files: List[str], 
+                 filter_protocols: List[str],
+                 tshark_path: str,
+                 current_result: bool,
+                 quite: bool,
+                 output_folder: str,
+                 taskname:str):
         self.console = Console()
         self.count_processes = count_processes
         self.input_files = input_files
@@ -34,6 +42,11 @@ class ProcessingManager:
         self.processed_files = 0
         self.processing_stats = ProcessingStats(input_files)
         self.results: ResultsContainer = ResultsContainer()
+        self.quite = quite
+        self.last_write_time = datetime.now()
+        self.last_update_time = datetime.now()
+        self.output_folder = output_folder
+        self.taskname = taskname
 
     def _validate_parameters(self) -> None:
         cpu_count = multiprocessing.cpu_count()
@@ -73,39 +86,66 @@ class ProcessingManager:
 
         return pool, tasks
     
+    def _time_save_results(self, is_must=False):
+        update_interval = 30
+        current_time = datetime.now()
+        seconds = (current_time - self.last_write_time).total_seconds()
+        if  seconds >= update_interval or is_must:
+            self.last_write_time = current_time
+            self.console.print(f"[dim][*] Intermediate results saved to folder: {self.output_folder}[/dim]")
+            print_results(task_folder=self.output_folder,
+                          task_name=self.taskname,
+                          results=self.results)
+            
+
+    def _time_update_dashboard(self, live, is_must=False):
+        update_interval = 0.25
+        current_time = datetime.now()
+        if (live and (current_time - self.last_update_time).total_seconds() >= update_interval) or is_must:
+            live.update(create_dashboard(self.processing_stats, self.results))
+            self.last_update_time = current_time
+
+    def _quite_monitor_processing(self, shared_queue: multiprocessing.Queue, tasks, live=None) -> None:
+        while True:
+            all_tasks_done = all(task.ready() for task in tasks)
+            queue_empty = shared_queue.empty()
+            
+            if all_tasks_done and queue_empty:
+                time.sleep(0.1)
+                if shared_queue.empty():
+                    self.processing_stats.status = "Done"
+                    self.processing_stats.end_time = datetime.now()
+                    break
+            try:
+                file_path, status, current_results = shared_queue.get_nowait()
+                self._process_queue_message(file_path, status, current_results)
+            except Empty:
+                time.sleep(0.01)
+            except Exception as e:
+                self.console.print(f"[!] Error processing queue: {e}")
+            finally:
+                self._time_update_dashboard(live=live)
+                self._time_save_results()
 
     def _monitor_processing(self, shared_queue: multiprocessing.Queue, tasks) -> None:
         """Мониторит процесс обработки файлов"""
-        with Live(create_dashboard(self.processing_stats, self.results), refresh_per_second=4, console=self.console) as live:
-            last_update = datetime.now()
-            update_interval = 0.1
+        if not self.quite:
+            with Live(
+                create_dashboard(self.processing_stats, self.results),
+                console=self.console
+            ) as live:
+                self._quite_monitor_processing(
+                    shared_queue=shared_queue,
+                    tasks=tasks,
+                    live=live
+                )
+        else:
+            self._quite_monitor_processing(
+                shared_queue=shared_queue,
+                tasks=tasks,
+                live=None
+            ) 
             
-            while True:
-                current_time = datetime.now()
-
-                if (current_time - last_update).total_seconds() >= update_interval:
-                    live.update(create_dashboard(self.processing_stats, self.results))
-                    last_update = current_time
-
-                all_tasks_done = all(task.ready() for task in tasks)
-                queue_empty = shared_queue.empty()
-
-                if all_tasks_done and queue_empty:
-                    time.sleep(0.1)
-                    if shared_queue.empty():
-                        self.processing_stats.status = "Done"
-                        self.processing_stats.end_time = datetime.now()
-                        live.update(create_dashboard(self.processing_stats, self.results))
-                        break
-                
-                try:
-                    file_path, status, current_results = shared_queue.get_nowait()
-                    self._process_queue_message(file_path, status, current_results)
-                except Empty:
-                    time.sleep(0.01)
-                except Exception as e:
-                    self.console.print(f"[!] Error processing queue: {e}")
-    
     def _cleanup_pool(self, pool) -> None:
         if pool is None:
             return
@@ -132,7 +172,7 @@ class ProcessingManager:
         self.console.print(f"[red][*] Error processing: {file_path} with error:/n {error}[/red]")
 
     def _handle_file_completed(self, file_path: str, ) -> None:
-        self.console.print(f"[gray][*] File completed: {file_path}")
+        self.console.print(f"[dim][*] File completed: {file_path}[/dim]")
 
     def _handle_parse_data(self, file_path: str, 
                           result_lines: List[str]) -> None:

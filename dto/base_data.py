@@ -16,6 +16,7 @@ class BaseData(ABC):
     session_id: str = ''
     src_port: str = ''
     dst_port: str = ''
+    socket_session: str = ''
     
     @property
     @abstractmethod
@@ -47,6 +48,10 @@ class BaseData(ABC):
     def is_user(self) -> bool:
         pass
 
+    @property
+    def id_session(self) -> str:
+        return f"{self.socket_session}:{self.protocol()}"
+    
     def __init__(self, packet, filename):
         unknown = 'unknown'
         self._packet = packet
@@ -77,10 +82,10 @@ class BaseData(ABC):
 
         self.src_ip = layers['ip'].get('ip_ip_src', unknown)
         self.dst_ip = layers['ip'].get('ip_ip_dst', unknown)
+
         #Session
         session_id1 = min(self.src_ip, self.dst_ip)
         session_id2 = max(self.src_ip, self.dst_ip)
-
         self.session_id = '-'.join([session_id1, session_id2])
 
         if 'tcp' in layers:
@@ -89,3 +94,10 @@ class BaseData(ABC):
         if 'udp' in layers:
             self.src_port = layers['udp'].get('udp_udp_srcport', unknown)
             self.dst_port = layers['udp'].get('udp_udp_dstport', unknown)
+
+        #Socket_session
+        src_socket = f"{self.src_ip}:{self.src_port}"
+        dst_socket = f"{self.dst_ip}:{self.dst_port}"
+        socket_session1 = min(src_socket, dst_socket)
+        socket_session2 = max(src_socket, dst_socket)
+        self.socket_session = '-'.join([socket_session1, socket_session2])

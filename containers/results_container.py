@@ -46,7 +46,8 @@ class ResultsContainer:
             self.append(obj)
 
     def get_all(self):
-        all_results = self.user_pass_container.get_all()
+        #all_results = self.user_pass_container.get_all()
+        all_results = []
         all_results.extend(self.ntlm_container.get_all())
         all_results.extend(self.kerberos_container.get_all())
         return all_results

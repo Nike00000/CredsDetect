@@ -32,11 +32,8 @@ def get_input_folder(arg:str) -> str:
         return os.path.dirname(arg)
 
 def get_task_name(arg:str) -> str:
-    time_id = datetime.now().isoformat(timespec='seconds').replace(':', '').replace('-', '').replace('.', '_')
-    if os.path.isdir(arg):
-        return f"{os.path.basename(get_input_folder(arg))}__{time_id}"
-    else:
-        return f"{os.path.basename(get_input_files(arg)[0])}__{time_id}"
+    time_id = datetime.now().isoformat(timespec='seconds').replace(':', '').replace('-', '').replace('.', '_')[2:]
+    return time_id
 
 if __name__ == "__main__":
     console = Console()
@@ -49,6 +46,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", type=str, help="path to the directory for results")
     parser.add_argument("-p", "--tshark_path", type=str, help="path to the TShark")
     parser.add_argument("-c", "--current", action="store_true",  help="output current results")
+    parser.add_argument("-q", "--quite", action="store_true",  help="dont show dashboard")
     args = parser.parse_args()
     show_machines = False #Вывод аутентификационных данных машинных учётных записей NTLM, Kerberos
 
@@ -101,39 +99,31 @@ if __name__ == "__main__":
     filter_protocols = ' or '.join(default_protocols)
     console.print(f'Protocol filtering is performed with "{filter_protocols}"')
     #Taskname
-    task_name = get_task_name(arg=args.input)
+    taskname = get_task_name(arg=args.input)
     if not args.name is None:
-        task_name = args.name
-    #Results folder
-    results_folder = os.path.join(os.getcwd(), 'results')
-    if not args.output is None:
-        results_folder = args.output
-    if not os.path.exists(results_folder):
-        os.mkdir(results_folder)
-    if not os.path.exists(results_folder):
-        console.print('[!] Output folder not exists!')
-        exit(1)
+        taskname = args.name
+
     #Output folder
-    output_folder = os.path.join(results_folder, task_name)
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
-    if not os.path.exists(output_folder):
-        console.print('[!] Results folder not exists!')
-        exit(1)
-    
+    default_results_folder = os.path.join(os.getcwd(), 'results')
+    results_folder = args.output if args.output is not None else default_results_folder
+    output_folder = os.path.join(results_folder, taskname)
+    os.makedirs(output_folder, exist_ok=True)
+    console.print(f"Output directory set to: {output_folder}")
 
     file_processor = ProcessingManager(
         count_processes=count_processes,
         input_files=input_files,
         filter_protocols=filter_protocols,
         tshark_path=tshark_path,
-        current_result=args.current)
+        current_result=args.current,
+        quite=args.quite,
+        output_folder=output_folder,
+        taskname=taskname)
+    
     file_processor.process_files(process_file_func=process_file)
     global_result_data = file_processor.results
 
     console.print('[dim][*] Saving results...[/dim]')
-    result_process = multiprocessing.Process(target=print_results, args=(output_folder, task_name, global_result_data))
-    result_process.start()
-    result_process.join()
+    print_results(output_folder, taskname, global_result_data)
 
-    print(f'[*] All results save in {output_folder}')
+    console.print(f'[*] All results save in {output_folder}')

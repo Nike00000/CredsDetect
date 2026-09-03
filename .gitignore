@@ -6,6 +6,7 @@ __pycache__/
 *.so
 config.txt
 cd_env
+test
 .Python
 build/
 develop-eggs/

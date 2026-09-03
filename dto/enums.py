@@ -31,6 +31,7 @@ class UserPassProtocolEnum(Enum):
     IMAP = 'IMAP'
     POP = 'POP'
     SMTP = 'SMTP'
+    LDAP = 'LDAP'
 
 class AuthenticationProtocolEnum(Enum):
     CLEARTEXT = 'ClearText'

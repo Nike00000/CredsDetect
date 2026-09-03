@@ -37,7 +37,7 @@ def create_dashboard(processing_stats: ProcessingStats, results: ResultsContaine
 
     layout["right"].split_column(
         Layout(create_stats_table(processing_stats), name="stats", size=6),
-        Layout(create_user_pass_table(results=results), name="user_pass", size=12)
+        Layout(create_user_pass_table(results=results), name="user_pass", size=2*len(UserPassProtocolEnum))
     )
 
     layout["left"].split_column(
@@ -138,19 +138,15 @@ def create_user_pass_table(results: ResultsContainer) -> Table:
                   box=box.ROUNDED,
                   expand=True)
     table.add_column("protocol", justify="center")
-    table.add_column("user", justify="center")
-    table.add_column("unique user", justify="center")
-    table.add_column("pass", justify="center")
-    table.add_column("unique pass", justify="center")
+    table.add_column("user:pass", justify="center")
+    table.add_column("unique", justify="center")
 
-
+    user_pass = results.user_pass_container.get_all()
 
     for user_pass_protocol in UserPassProtocolEnum:
         table.add_row(str(user_pass_protocol.value),
-                      str(len(results.user_pass_container.usernames[user_pass_protocol].all)),
-                      str(len(results.user_pass_container.usernames[user_pass_protocol].unique)),
-                      str(len(results.user_pass_container.passwords[user_pass_protocol].all)),
-                      str(len(results.user_pass_container.passwords[user_pass_protocol].unique)),)
+                      str(len(user_pass[user_pass_protocol].all)),
+                      str(len(user_pass[user_pass_protocol].unique)),)
     return table
 
 def create_kerberos_table(results: ResultsContainer) -> Table:
