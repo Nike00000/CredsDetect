@@ -17,7 +17,7 @@ class POPParser:
             return BasicTypeEnum.USERNAME
         if command == 'pass':
             return BasicTypeEnum.PASSWORD
-        raise TypeError(f'Unknown command for POP protocol: {command!r}')
+        return None
 
     @staticmethod
     def get_arg(packet) -> str | None:
@@ -31,12 +31,12 @@ class POPParser:
     def try_parse(cls, packet):
         try:
             command = cls.get_command(packet=packet)
-            arg = cls.get_arg(packet=packet)
-            if command == BasicTypeEnum.USERNAME and arg:
-                return (UserPassProtocolEnum.POP, arg, None)
-            if command == BasicTypeEnum.PASSWORD and arg:
-                return (UserPassProtocolEnum.POP, None, arg)
-
+            if command:
+                arg = cls.get_arg(packet=packet)
+                if command == BasicTypeEnum.USERNAME and arg:
+                    return (UserPassProtocolEnum.POP, arg, None)
+                if command == BasicTypeEnum.PASSWORD and arg:
+                    return (UserPassProtocolEnum.POP, None, arg)
             return None
         except Exception as e:
             raise TypeError(

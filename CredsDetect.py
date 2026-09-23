@@ -91,7 +91,7 @@ if __name__ == "__main__":
                          'http.proxy_authenticate',
                          'http.proxy_authorization',
                          'http.authorization',
-                         'pop',
+                         'pop.request',
                          'imap.request',
                          'smtp.auth.username',
                          'smtp.auth.password',
