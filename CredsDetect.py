@@ -92,9 +92,10 @@ if __name__ == "__main__":
                          'http.proxy_authorization',
                          'http.authorization',
                          'pop',
-                         'imap',
-                         'smtp',
-                         'ftp',
+                         'imap.request',
+                         'smtp.auth.username',
+                         'smtp.auth.password',
+                         'ftp.request',
                          'ldap.bindRequest_element']
     filter_protocols = ' or '.join(default_protocols)
     console.print(f'Protocol filtering is performed with "{filter_protocols}"')

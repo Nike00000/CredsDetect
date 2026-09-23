@@ -9,15 +9,13 @@ class FTPParser:
                   .get('ftp', {})
                   .get('ftp_ftp_request_command')
         )
-        if command is None:
-            raise TypeError('No FTP command in packet')
-
-        command = command.lower()
-        if command == 'user':
-            return BasicTypeEnum.USERNAME
-        if command == 'pass':
-            return BasicTypeEnum.PASSWORD
-        raise TypeError(f'Unknown command for FTP protocol: {command!r}')
+        if command:
+            command = command.lower()
+            if command == 'user':
+                return BasicTypeEnum.USERNAME
+            if command == 'pass':
+                return BasicTypeEnum.PASSWORD
+        return None
 
     @staticmethod
     def get_arg(packet) -> str | None:
@@ -31,6 +29,8 @@ class FTPParser:
     def try_parse(cls, packet):
         try:
             command = cls.get_command(packet=packet)
+            if command is None:
+                return None
             arg = cls.get_arg(packet=packet)
 
             if command == BasicTypeEnum.USERNAME and arg:
@@ -41,6 +41,4 @@ class FTPParser:
 
             return None
         except Exception as e:
-            raise TypeError(
-                f'No simple data for FTP protocol, exception: {e}'
-            ) from e
+            return None

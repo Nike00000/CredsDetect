@@ -115,6 +115,7 @@ class ProcessingManager:
                 if shared_queue.empty():
                     self.processing_stats.status = "Done"
                     self.processing_stats.end_time = datetime.now()
+                    self._time_update_dashboard(live=live,is_must=True)
                     break
             try:
                 file_path, status, current_results = shared_queue.get_nowait()

@@ -35,6 +35,7 @@ class UserPassContainer:
                     if data.is_full:
                         all[protocol].append(copy.deepcopy(data))
                         i = i + 1
+                        continue
                     if data.is_only_username and i + 1 < len(session_data):
                             next_data = session_data[i + 1]
                             if next_data.is_only_password:
