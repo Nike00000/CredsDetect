@@ -1,15 +1,44 @@
-from dto.enums import BasicTypeEnum
+from dto.enums import BasicTypeEnum, UserPassProtocolEnum
 
 class POPParser:
 
     @staticmethod
     def get_command(packet) -> BasicTypeEnum:
-        command = packet['layers']['pop']['pop_pop_request_command'].lower()
+        command = (
+            packet.get('layers', {})
+                  .get('pop', {})
+                  .get('pop_pop_request_command')
+        )
+        if command is None:
+            raise TypeError('No POP command in packet')
+
+        command = command.lower()
         if command == 'user':
             return BasicTypeEnum.USERNAME
-        elif command == 'pass':
+        if command == 'pass':
             return BasicTypeEnum.PASSWORD
-        raise TypeError("Unnknown command for POP protocol")
+        raise TypeError(f'Unknown command for POP protocol: {command!r}')
+
     @staticmethod
-    def get_arg(packet) -> str:
-        return packet['layers']['pop']['pop_pop_request_parameter']
+    def get_arg(packet) -> str | None:
+        return (
+            packet.get('layers', {})
+                  .get('pop', {})
+                  .get('pop_pop_request_parameter')
+        )
+
+    @classmethod
+    def try_parse(cls, packet):
+        try:
+            command = cls.get_command(packet=packet)
+            arg = cls.get_arg(packet=packet)
+            if command == BasicTypeEnum.USERNAME and arg:
+                return (UserPassProtocolEnum.POP, arg, None)
+            if command == BasicTypeEnum.PASSWORD and arg:
+                return (UserPassProtocolEnum.POP, None, arg)
+
+            return None
+        except Exception as e:
+            raise TypeError(
+                f'No simple data for POP protocol, exception: {e}'
+            ) from e

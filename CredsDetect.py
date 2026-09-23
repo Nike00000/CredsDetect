@@ -95,7 +95,7 @@ if __name__ == "__main__":
                          'imap',
                          'smtp',
                          'ftp',
-                         'ldap']
+                         'ldap.bindRequest_element']
     filter_protocols = ' or '.join(default_protocols)
     console.print(f'Protocol filtering is performed with "{filter_protocols}"')
     #Taskname
