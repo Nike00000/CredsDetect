@@ -15,8 +15,10 @@ class HTTPProxyAuthParser(BaseParser):
     @classmethod
     def parse(cls, fields: Dict[str, str]) -> Optional[UPData]:
         raw = fields.get('http.proxy_authorization') or None
+        up_protocol = UserPassProtocolEnum.HTTP_ProxyAuthorization
         if not raw:
             raw = fields.get('http.proxy_authenticate') or None
+            up_protocol = UserPassProtocolEnum.HTTP_ProxyAuthenticate
             if not raw:
                 return None
 
@@ -40,5 +42,5 @@ class HTTPProxyAuthParser(BaseParser):
             **base,
             username=username,
             password=password,
-            up_protocol=UserPassProtocolEnum.HTTP_ProxyAuthenticate
+            up_protocol=up_protocol
         )
