@@ -37,11 +37,11 @@ def create_dashboard(processing_stats: ProcessingStats, results: ResultsContaine
 
     layout["right"].split_column(
         Layout(create_stats_table(processing_stats), name="stats", size=6),
-        Layout(create_user_pass_table(results=results), name="user_pass", size=2*len(UserPassProtocolEnum))
+        Layout(create_user_pass_table(results=results), name="user_pass", size=5+len(UserPassProtocolEnum))
     )
 
     layout["left"].split_column(
-        Layout(create_ntlm_table(results=results), name="ntlm", size=7),
+        Layout(create_ntlm_table(results=results), name="ntlm", size=5+len(NTLMResponseEnum)),
         Layout(create_kerberos_table(results=results), name="kerberos", size=14)
     )
     if processing_stats.end_time == None:
@@ -59,17 +59,6 @@ def create_dashboard(processing_stats: ProcessingStats, results: ResultsContaine
     )
 
     return layout
-
-def create_progress():
-    progress = Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(bar_width=40),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            TextColumn("•"),
-            TimeRemainingColumn(),
-        )
 
 def create_stats_table(processing_stats: ProcessingStats) -> Table:
     table = Table(title='Task statistics',
@@ -124,11 +113,12 @@ def create_ntlm_table(results: ResultsContainer) -> Table:
     table.add_column("unique user", justify="center")
 
     for response_type in NTLMResponseEnum:
+        responses = results.ntlm_container.merge_to_hash(response_type)
         table.add_row('NT',
                       str(response_type.value),
-                      str(len(results.ntlm_container.responses[response_type].all)),
-                      str(len(results.ntlm_container.responses[response_type].users)),
-                      str(len(results.ntlm_container.responses[response_type].unique)))
+                      str(len(responses.all)),
+                      str(len(responses.users)),
+                      str(len(responses.unique)))
     return table
 
 def create_user_pass_table(results: ResultsContainer) -> Table:

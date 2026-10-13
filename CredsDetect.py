@@ -1,10 +1,10 @@
 
-from output_manager.output_manager import *
+from output_workers.output_manager import *
 from worker.process_file import *
 from worker.tshark_manager import *
 from worker.processing_manager import ProcessingManager
-from output_manager.output_manager import *
-from output_manager.banner import *
+from output_workers.output_manager import *
+from output_workers.banner import *
 from datetime import datetime 
 from rich.console import Console
 import multiprocessing
@@ -83,22 +83,7 @@ if __name__ == "__main__":
     count_processes = min(multiprocessing.cpu_count(), len(input_files))
     if not args.threads is None:
         count_processes = min(len(input_files), args.threads)
-    #Filter protocols
-    default_protocols = ['kerberos.as_req_element',
-                         'kerberos.as_rep_element',
-                         'kerberos.tgs_rep_element',
-                         'ntlmssp',
-                         'http.proxy_authenticate',
-                         'http.proxy_authorization',
-                         'http.authorization',
-                         'pop.request',
-                         'imap.request',
-                         'smtp.auth.username',
-                         'smtp.auth.password',
-                         'ftp.request',
-                         'ldap.bindRequest_element']
-    filter_protocols = ' or '.join(default_protocols)
-    console.print(f'Protocol filtering is performed with "{filter_protocols}"')
+
     #Taskname
     taskname = get_task_name(arg=args.input)
     if not args.name is None:
@@ -114,7 +99,6 @@ if __name__ == "__main__":
     file_processor = ProcessingManager(
         count_processes=count_processes,
         input_files=input_files,
-        filter_protocols=filter_protocols,
         tshark_path=tshark_path,
         current_result=args.current,
         quite=args.quite,

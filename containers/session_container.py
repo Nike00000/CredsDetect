@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import overload, Union, List, Dict, TypeVar, Generic
-from dto.user_pass_data import UserPassData
+from dto.user_pass_data import UPData
 from containers.unique_container import UniqueContainer
 from dto.enums import UserPassProtocolEnum
 from dto.base_data import BaseData
@@ -16,7 +16,7 @@ class SessionContainer(Generic[T]):
         )
     
     def append(self, data: T) -> None:
-        if not self.sessions.get(data.id_session):
-            self.sessions[data.id_session] = []
-        self.sessions[data.id_session].append(data)
-        self.sessions[data.id_session].sort(key=lambda x: x.timestamp)
+        if not self.sessions.get(data.session_id):
+            self.sessions[data.session_id] = []
+        self.sessions[data.session_id].append(data)
+        self.sessions[data.session_id].sort(key=lambda x: x.timestamp)

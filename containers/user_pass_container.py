@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
-from dto.user_pass_data import UserPassData
+from dto.user_pass_data import UPData
 from containers.unique_container import UniqueContainer
 from dto.enums import UserPassProtocolEnum
 from containers.session_container import SessionContainer
@@ -15,13 +15,13 @@ class UserPassContainer:
         for protocol in UserPassProtocolEnum:
             self.protocol_containers[protocol] = SessionContainer()
 
-    session_container: SessionContainer[UserPassData] = SessionContainer()
+    session_container: SessionContainer[UPData] = SessionContainer()
 
-    def append(self, data: UserPassData) -> None:
-        self.protocol_containers[data.userpass_protocol].append(data=data)
+    def append(self, data: UPData) -> None:
+        self.protocol_containers[data.up_protocol].append(data=data)
     
-    def get_all(self) -> Dict[UserPassProtocolEnum, UniqueContainer[UserPassData]]:
-        all: Dict[UserPassProtocolEnum, UniqueContainer[UserPassData]] = {}
+    def get_all(self) -> Dict[UserPassProtocolEnum, UniqueContainer[UPData]]:
+        all: Dict[UserPassProtocolEnum, UniqueContainer[UPData]] = {}
         for protocol in UserPassProtocolEnum:
             all[protocol] = UniqueContainer()
             if protocol not in self.protocol_containers:
@@ -39,7 +39,7 @@ class UserPassContainer:
                     if data.is_only_username and i + 1 < len(session_data):
                             next_data = session_data[i + 1]
                             if next_data.is_only_password:
-                                local_data:UserPassData = copy.deepcopy(data)
+                                local_data:UPData = copy.deepcopy(data)
                                 local_data.password = next_data.password
                                 all[protocol].append(local_data)
                                 i = i + 2

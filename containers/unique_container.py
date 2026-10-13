@@ -17,6 +17,6 @@ class UniqueContainer(Generic[T]):
 
     def append(self, data:T) -> None:
         self.all.append(data)
-        if data.is_user():
+        if data.is_user:
             self.users.append(data)
-            self._unique[data.key()] = data
+            self._unique[data.key] = data

@@ -1,161 +1,125 @@
 from dataclasses import dataclass
-from dto.base_data import BaseData, AuthenticationProtocolEnum
-from dto.enums import NTLMResponseEnum, ProtocolEnum
-from parsers.ntlm_parser import NTLMParser
-from parsers.http_parser import HTTPParser, HTTPTypeEnum
-
-
+from dto.base_data import BaseData
+from dto.enums import AuthenticationProtocolEnum
+from dto.enums import NTLMResponseEnum
+from abc import ABC, abstractmethod
 
 @dataclass
-class NetNTLMExtractor(BaseData):
-    _payload_bytes: bytes = None
-    _protocol: str = ''
+class NetNTLMData(BaseData):
+    """Общий DTO для всех NTLM-сообщений."""
+    authentication_protocol: str = AuthenticationProtocolEnum.NETNTLM.value
+    name: str = 'netntlm'
+    username: str = None
+    domain: str = None
 
-    def __init__(self, packet, filename):
-        super().__init__(packet=packet, filename=filename)
-        try:
-            self._payload_bytes = NTLMParser.extract_payload_bytes(packet=packet)
-            self._protocol = ProtocolEnum.TCP.value
-        except:
-            pass
-
-        if  self._payload_bytes != None:
-            return
-        authorization = None
-        try:
-            authorization = HTTPParser.extract_proxy_authenticate(packet=packet)
-            self._protocol = ProtocolEnum.HTTP_ProxyAuthenticate.value
-        except:
-            pass
-        try:
-            authorization = HTTPParser.extract_proxy_authorization(packet=packet)
-            self._protocol = ProtocolEnum.HTTP_ProxyAuthorization.value
-        except:
-            pass
-        try:
-            authorization = HTTPParser.extract_http_authorization(packet=packet)
-            self._protocol = ProtocolEnum.HTTP_Authorization.value
-        except:
-            pass
-        if authorization == None:
-            raise TypeError("NTLM data don't found in packet")
-        autorization_type = HTTPParser.get_type_auth(authorization=authorization)
-        if autorization_type == HTTPTypeEnum.NTLM:
-            self._payload_bytes = HTTPParser.get_ntlm(authorization=authorization)
-        else:
-            raise TypeError("Unsupported type http authorization")
-
-@dataclass
-class ChallengeNetNTLM(NetNTLMExtractor):
-    authentication_protocol: AuthenticationProtocolEnum = AuthenticationProtocolEnum.NETNTLM.value
-    challenge: str = ''
-    name = 'challenge'
-
-    def __init__(self, packet, filename):
-        super().__init__(packet=packet, filename=filename)
-
-        type_ntlm = NTLMParser.get_message_type(payload_bytes=self._payload_bytes)
-        if type_ntlm == 2:
-            self.challenge = NTLMParser.get_challenge(payload_bytes=self._payload_bytes)
-        else:
-            raise ValueError("The message type is not as expected for the challenge")
-        
+    @property
     def protocol(self) -> str:
-        return self._protocol
-    
+        return AuthenticationProtocolEnum.NETNTLM.value
+
+    @property
     def key(self) -> str:
-        key = self.session_id + self.type
+        return f"{self.protocol}_{self.dst_ip}_{self.username}_{self.domain}"
+
+    @property
+    def is_user(self) -> bool:
+        return True
+
+@dataclass
+class ChallengeNetNTLM(NetNTLMData):
+    name = 'challenge'
+    challenge: str = ''
+
+    @property
+    def key(self) -> str:
+        key = self.session_id + self.challenge
         return key.lower()
-    
+
+    @property
     def data(self) -> str:
         return self.challenge
-    
+
+    @property
     def is_user(self) -> bool:
         return False
 
-
 @dataclass
-class ResponseNetNTLM(NetNTLMExtractor):
+class ResponseNetNTLM(NetNTLMData, ABC):
+
+    name: str = 'response'
     domain: str = ''
     username: str = ''
-    workstation: str = ''
-    authentication_protocol: AuthenticationProtocolEnum = AuthenticationProtocolEnum.NETNTLM.value
-    name: str = 'response'
     lm_response: str = ''
-    nt_response: str = ''
-    _protocol: ProtocolEnum = None
+    server_challenge: str = None
 
-    def __init__(self, packet, filename):
-        super().__init__(packet=packet, filename=filename)
-
-        type_ntlm = NTLMParser.get_message_type(payload_bytes=self._payload_bytes)
-        
-        if type_ntlm == 3:
-            self.domain = NTLMParser.get_domain(payload_bytes=self._payload_bytes)
-            self.username = NTLMParser.get_username(payload_bytes=self._payload_bytes)
-            self.workstation = NTLMParser.get_workstation(payload_bytes=self._payload_bytes)
-            self.lm_response = NTLMParser.get_lm_response(payload_bytes=self._payload_bytes)
-            self.nt_response = NTLMParser.get_nt_response(payload_bytes=self._payload_bytes)
-        else:
-            raise ValueError("The message type is not as expected for the response")
-            
+    @property
+    @abstractmethod
     def version(self) -> NTLMResponseEnum:
-        if len(self.nt_response) > 48:
-            return NTLMResponseEnum.RESPONSE_V2
-        else:
-            return NTLMResponseEnum.RESPONSE_V1
-        
-    def protocol(self) -> str:
-        return self._protocol
+        ...
+
+    @property
+    @abstractmethod
+    def data(self) -> str:
+        ...
+
+    @property
+    def has_challenge(self) -> bool:
+        return self.server_challenge is not None
     
+    @property
     def is_user(self) -> bool:
         return '$' not in self.username
-    
+
+    @property   
     def key(self) -> str:
-        key = f"{self.username}@{self.domain.split('.')[0]}{self.version().value}"
-        return key.lower()
-    
-    def data(self) -> str:
-        text = ''
-        if self.version() == NTLMResponseEnum.RESPONSE_V1:
-            text = f"{self.username}@{self.domain}::{self.nt_response}:{self.nt_response}"
-        elif self.version() == NTLMResponseEnum.RESPONSE_V2:
-            text = f"{self.username}::{self.domain}:{self.nt_response[:32]}:{self.nt_response[32:]}"
-        return text
-    
+        domain_short = self.domain.split('.')[0] if self.domain else ''
+        return f"{self.username}@{domain_short}::{self.lm_response}:{self.nt_response}".lower()
 
 @dataclass
-class HashNetNTLM(BaseData):
-    challenge: ChallengeNetNTLM = None
-    response: ResponseNetNTLM = None
-    authentication_protocol: AuthenticationProtocolEnum = AuthenticationProtocolEnum.NETNTLM.value
-    name: str = 'hash'
-    
-    def __init__(self, challenge: ChallengeNetNTLM, response: ResponseNetNTLM):
-        super().__init__(packet=response._packet, filename=response.filename)
-        self.challenge = challenge
-        self.response = response
+class RespV1NetNTLM(ResponseNetNTLM):
+    """NTLMv1 response (24 байта, без ESS)."""
+    name: str = 'response_v1'
+    nt_response: str = ''
+    @property
+    def version(self):
+        return NTLMResponseEnum.RESPONSE_V1
 
-    def version(self) -> NTLMResponseEnum:
-        return self.response.version()
-        
-    def protocol(self) -> str:
-        return self.response._protocol.value
-    
-    def is_user(self) -> bool:
-        return self.response.is_user()
-    
-    def key(self) -> str:
-        key = f"{self.response.username}@{self.response.domain.split('.')[0]}{self.response.version().value}"
-        return key.lower()
-    
+    @property
     def data(self) -> str:
-        text = ""
-        version = self.version()
-        if version == NTLMResponseEnum.RESPONSE_V1:
-            text_username = f"{self.response.username}@{self.response.domain}"
-            text = f"{text_username}:{self.response.lm_response}:{self.response.nt_response}:{self.challenge.challenge}"
-        elif version == NTLMResponseEnum.RESPONSE_V2:
-            text_username = f"{self.response.username}::{self.response.domain}"
-            text = f"{text_username}:{self.challenge.challenge}:{self.response.nt_response[:32]}:{self.response.nt_response[32:]}"
-        return text
+        if self.server_challenge:
+            return f"{self.username}::{self.domain}::{self.lm_response}:{self.nt_response}:{self.server_challenge}"
+        return f"{self.username}::{self.domain}::{self.lm_response}:{self.nt_response}:(unknown_server_challenge)"
+
+@dataclass
+class RespV1ESSNetNTLM(RespV1NetNTLM):
+    """NTLMv1 ESS: LM response = client_challenge + 16 нулей."""
+    name: str = 'response_v1_ess'
+    client_challenge: str = ''
+    nt_response: str = ''
+
+    @property
+    def version(self):
+        return NTLMResponseEnum.RESPONSE_V1ESS
+
+    @property
+    def data(self) -> str:
+        if self.server_challenge:
+            return f"{self.username}::{self.domain}:{self.lm_response}:{self.nt_response}:{self.server_challenge}"
+        return f"{self.username}::{self.domain}:{self.lm_response}:{self.nt_response}:(unknown_server_challenge)"
+
+@dataclass
+class RespV2NetNTLM(RespV1NetNTLM):
+    """NTLMv1 ESS: LM response = client_challenge + 16 нулей."""
+    name: str = 'response_v1_ess'
+    client_challenge: str = ''
+    ntproofstr: str = ''
+    blob: str = ''
+    
+    @property
+    def version(self):
+        return NTLMResponseEnum.RESPONSE_V2
+
+    @property
+    def data(self) -> str:
+        if self.server_challenge:
+            return f"{self.username}::{self.domain}:{self.server_challenge}:{self.ntproofstr}:{self.blob}"
+        return f"{self.username}::{self.domain}:(unknown_server_challenge):{self.ntproofstr}:{self.blob}"

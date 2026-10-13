@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, overload, Union
-from dto.user_pass_data import UserPassData
+from dto.user_pass_data import UPData
 from dto.net_ntlm_data import ChallengeNetNTLM, ResponseNetNTLM
 from dto.kerberos_data import AsreqKerberos, AsrepKerberos, TgsrepKerberos
 from containers.ntlm_container import NTLMContainer
@@ -23,20 +23,20 @@ class ResultsContainer:
     @overload
     def append(self, data: ResponseNetNTLM) -> None: ...
     @overload
-    def append(self, data: UserPassData) -> None: ...
+    def append(self, data: UPData) -> None: ...
     
     def append(self, data: Union[AsreqKerberos,
                                  AsreqKerberos,
                                  TgsrepKerberos,
                                  ResponseNetNTLM,
                                  ChallengeNetNTLM,
-                                 UserPassData]) -> None:
+                                 UPData]) -> None:
         match data:
             case AsreqKerberos() | AsrepKerberos() | TgsrepKerberos():
                 self.kerberos_container.append(data)
             case ChallengeNetNTLM() | ResponseNetNTLM():
                 self.ntlm_container.append(data)
-            case UserPassData():
+            case UPData():
                 self.user_pass_container.append(data)
             case _:
                 raise TypeError(f"Unsupported type: {type(data)}")

@@ -4,8 +4,9 @@ from containers.results_container import ResultsContainer
 from containers.unique_container import UniqueContainer
 from dto.enums import KerberosEtypeEnum, NTLMResponseEnum
 from dto.base_data import BaseData
-from dto.user_pass_data import UserPassData
+from dto.user_pass_data import UPData
 from dto.enums import UserPassProtocolEnum
+
 hashcat_types = {'asreq_17': '19800',
                  'asreq_18': '19900',
                  'asreq_23': '7500',
@@ -16,6 +17,7 @@ hashcat_types = {'asreq_17': '19800',
                  'tgsrep_18': '19700',
                  'tgsrep_23': '13100',
                  f'ntlm_{NTLMResponseEnum.RESPONSE_V1.value}': '5500',
+                 f'ntlm_{NTLMResponseEnum.RESPONSE_V1ESS.value}': '5500',
                  f'ntlm_{NTLMResponseEnum.RESPONSE_V2.value}': '5600'
                  }
 
@@ -46,7 +48,7 @@ def print_kerberos(results:ResultsContainer, folder:str, task_name:str):
 
 def print_ntlm(results:ResultsContainer, folder:str, task_name:str):
     for ntlm_type in NTLMResponseEnum:
-        print_unique_container(container=results.ntlm_container.get_hash(ntlm_type),
+        print_unique_container(container=results.ntlm_container.merge_to_hash(ntlm_type),
                                folder=folder,
                                task_name=task_name,
                                name=f'ntlm_{ntlm_type.value}')
@@ -56,17 +58,17 @@ def print_ntlm(results:ResultsContainer, folder:str, task_name:str):
 def print_results(task_folder:str, task_name:str, results:ResultsContainer):
     all_results = []
 
-    userpass_data = results.user_pass_container.get_all()
-    for protocol in userpass_data.keys():
-        if not len(userpass_data[protocol].unique):
+    up_data = results.user_pass_container.get_all()
+    for protocol in up_data.keys():
+        if not len(up_data[protocol].unique):
             continue
-        write_to_csv(data_list=userpass_data[protocol].unique,
+        write_to_csv(data_list=up_data[protocol].unique,
                      filename=f"unique.{protocol.value}.{task_name}.csv".lower(),
                      folder=task_folder)
-        write_to_csv(data_list=userpass_data[protocol].all,
+        write_to_csv(data_list=up_data[protocol].all,
                      filename=f"all.{protocol.value}.{task_name}.csv".lower(),
                      folder=task_folder)
-        all_results.extend(userpass_data[protocol].all)
+        all_results.extend(up_data[protocol].all)
 
     #Print results
     print_kerberos(results=results,
@@ -93,7 +95,7 @@ def write_in_file(packets: list[BaseData], filename, folder):
     file_path = os.path.join(folder, filename)
     data_strs = []
     for packet in packets:
-        data_str = packet.data()
+        data_str = packet.data
         data_strs.append(data_str)
     data_strs.sort()
     file = open(file_path, 'w', encoding='utf-8')
@@ -119,8 +121,8 @@ def write_to_csv(data_list:list[BaseData], filename:str, folder:str):
             row = [data.filename,
                    f"{data.src_ip}:{data.src_port}",
                    f"{data.dst_ip}:{data.dst_port}",
-                   data.protocol(),
+                   data.protocol,
                    data.authentication_protocol,
                    data.name,
-                   data.data()]
+                   data.data]
             writer.writerow(row)

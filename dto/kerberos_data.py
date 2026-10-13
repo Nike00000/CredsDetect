@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from dto.base_data import BaseData, AuthenticationProtocolEnum
-from parsers.kerberos_parser import KerberosParser
-from dto.enums import KerberosEtypeEnum, ProtocolEnum
+from dto.base_data import BaseData
+from dto.enums import AuthenticationProtocolEnum
+from dto.enums import KerberosEtypeEnum
 
 @dataclass
 class AsreqKerberos(BaseData):
@@ -12,26 +12,18 @@ class AsreqKerberos(BaseData):
     cipher: str = ''
     etype: KerberosEtypeEnum = None
 
-    def __init__(self, packet, filename):
-        super().__init__(packet=packet, filename=filename)
-        kerberos_type = KerberosParser.get_message_type(packet=packet)
-        if kerberos_type == 10:
-            self.cname = KerberosParser.get_cname(packet=packet)
-            self.realm = KerberosParser.get_realm(packet=packet)
-            self.cipher = KerberosParser.get_pa_enc_timestamp_cipher(packet=packet).replace(':', '')
-            self.etype = KerberosEtypeEnum(KerberosParser.get_etype(packet=packet))
-        else:
-            raise ValueError("The message type is not as expected for the challenge")
-        
+    @property    
     def protocol(self) -> str:
         return AuthenticationProtocolEnum.KERBEROS.value
-    
+
+    @property
     def key(self) -> str:
         cname_lower = str(self.cname).lower().split('@')[0]
         realm_upper = str(self.realm).upper()
         hash_id = f"$krb5pa${self.etype}${cname_lower}${realm_upper.split('.')[0]}"
         return hash_id.lower()
 
+    @property
     def data(self) -> str:
         #$krb5pa$23$user$realm$salt$4e751db65422b2117f7eac7b721932dc8aa0d9966785ecd958f971f622bf5c42dc0c70b532363138363631363132333238383835
         #$krb5pa$17$hashcat$HASHCATDOMAIN.COM$a17776abe5383236c58582f515843e029ecbff43706d177651b7b6cdb2713b17597ddb35b1c9c470c281589fd1d51cca125414d19e40e333
@@ -44,7 +36,8 @@ class AsreqKerberos(BaseData):
             return f"$krb5pa${self.etype.value}${cname_lower}${self.realm}${salt}${self.cipher[32:]}{self.cipher[:32]}"
         else:
             return f"$krb5pa${self.etype.value}${cname_lower}${realm_upper}${self.cipher}"
-        
+
+    @property    
     def is_user(self) -> bool:
         return '$' not in self.cname
         
@@ -57,26 +50,18 @@ class AsrepKerberos(BaseData):
     cipher: str = ''
     etype: KerberosEtypeEnum = None
 
-    def __init__(self, packet, filename):
-        super().__init__(packet=packet, filename=filename)
-        kerberos_type = KerberosParser.get_message_type(packet=packet)
-        if kerberos_type == 11:
-            self.cname = KerberosParser.get_cname(packet=packet)
-            self.realm = KerberosParser.get_realm(packet=packet)
-            self.cipher = KerberosParser.get_pa_encryptedKDCREPData_cipher(packet=packet).replace(':', '')
-            self.etype = KerberosEtypeEnum(KerberosParser.get_etype1(packet=packet))
-        else:
-            raise ValueError("The message type is not as expected for the challenge")
-        
+    @property    
     def protocol(self) -> str:
-        return AuthenticationProtocolEnum.KERBEROS.value
+        return self.authentication_protocol
     
+    @property
     def key(self) -> str:
         cname_lower = str(self.cname).lower()
         realm_upper = str(self.realm).upper()
         hash_id = f"$krb5asrep${self.etype}${cname_lower}@{realm_upper.split('.')[0]}"
         return hash_id.lower()
 
+    @property
     def data(self) -> str:
         #$krb5asrep$23$user@domain.com:3e156ada591263b8aab0965f5aebd837$007497cb51b6c8116d6407a782ea0e1c5402b17db7afa6b05a6d30ed164a9933c754d720e279c6c573679bd27128fe77e5fea1f72334c1193c8ff0b370fadc6368bf2d49bbfdba4c5dccab95e8c8ebfdc75f438a0797dbfb2f8a1a5f4c423f9bfc1fea483342a11bd56a216f4d5158ccc4b224b52894fadfba3957dfe4b6b8f5f9f9fe422811a314768673e0c924340b8ccb84775ce9defaa3baa0910b676ad0036d13032b0dd94e3b13903cc738a7b6d00b0b3c210d1f972a6c7cae9bd3c959acf7565be528fc179118f28c679f6deeee1456f0781eb8154e18e49cb27b64bf74cd7112a0ebae2102ac
         #$krb5asrep$17$user$EXAMPLE.COM$a419c4030e555734b06c2629$c09a1421f96eb126c757a4b87830381f142477d9a85b2beb3093dbfd44f38ddb6016a479537fb7b36e046315869fe79187217971ff6a12c1e0a2df3f68045e03814b21f756d8981f781803d65e8572823c88979581d93cf7d768f2efced16f3719b8d1004d9e73d798de255383476bced47d1982f16be77d0feb55a1f44f58bd013fa4caee58ac614caf0f1cf9101ec9623c5b8c2a1491b73f134f074790088fdb360b5ebce0d32a8145ed00a81ddf77188e150b92d8e8ddd0285d27f1514253e5546e6bba864b362bb1e6483b26d08fa4cc268bfbefe0f690039bcc524b774599df3680c1c3431d891bfa99514a877f964e
@@ -89,7 +74,8 @@ class AsrepKerberos(BaseData):
             hash_data = f"$krb5asrep${self.etype.value}${cname_lower}${realm_upper}${self.cipher[-24:]}${self.cipher[:-24]}"
         
         return hash_data
-        
+
+    @property    
     def is_user(self) -> bool:
         return '$' not in self.cname
     
@@ -103,27 +89,17 @@ class TgsrepKerberos(BaseData):
     cipher: str = ''
     etype: KerberosEtypeEnum = None
 
-    def __init__(self, packet, filename):
-        super().__init__(packet=packet, filename=filename)
-        kerberos_type = KerberosParser.get_message_type(packet=packet)
-        if kerberos_type == 13:
-            self.cname = KerberosParser.get_cname(packet=packet)
-            self.sname = KerberosParser.get_sname(packet=packet)
-            self.realm = KerberosParser.get_crealm(packet=packet)
-
-            self.cipher = KerberosParser.get_pa_encryptedKDCREPData_cipher(packet=packet).replace(':','')
-            self.etype = KerberosEtypeEnum(KerberosParser.get_etype2(packet=packet))
-        else:
-            raise ValueError("The message type is not as expected for the challenge")
-        
+    @property    
     def protocol(self) -> str:
         return AuthenticationProtocolEnum.KERBEROS.value
-    
+
+    @property
     def key(self) -> str:
         realm_upper = str(self.realm).upper()
         hash_id = f"$krb5tgs${self.etype.value}$*{self.sname.lower()}${realm_upper.split('.')[0]}"
         return hash_id
 
+    @property
     def data(self) -> str:
         #$krb5tgs$23$*user$realm$test/spn*$63386d22d359fe42230300d56852c9eb$891ad31d09ab89c6b3b8c5e5de6c06a7f49fd559d7a9a3c32576c8fedf705376cea582ab5938f7fc8bc741acf05c5990741b36ef4311fe3562a41b70a4ec6ecba849905f2385bb3799d92499909658c7287c49160276bca0006c350b0db4fd387adc27c01e9e9ad0c20ed53a7e6356dee2452e35eca2a6a1d1432796fc5c19d068978df74d3d0baf35c77de12456bf1144b6a750d11f55805f5a16ece2975246e2d026dce997fba34ac8757312e9e4e6272de35e20d52fb668c5ed
         #$krb5tgs$17$user$realm$ae8434177efd09be5bc2eff8$90b4ce5b266821adc26c64f71958a475cf9348fce65096190be04f8430c4e0d554c86dd7ad29c275f9e8f15d2dab4565a3d6e21e449dc2f88e52ea0402c7170ba74f4af037c5d7f8db6d53018a564ab590fc23aa1134788bcc4a55f69ec13c0a083291a96b41bffb978f5a160b7edc828382d11aacd89b5a1bfa710b0e591b190bff9062eace4d26187777db358e70efd26df9c9312dbeef20b1ee0d823d4e71b8f1d00d91ea017459c27c32dc20e451ea6278be63cdd512ce656357c942b95438228e
@@ -134,6 +110,7 @@ class TgsrepKerberos(BaseData):
         else:
             hash_data = f"$krb5tgs${self.etype.value}${self.sname}${realm_upper}${self.cipher[-24:]}${self.cipher[:-24]}"
         return hash_data
-        
+    
+    @property    
     def is_user(self) -> bool:
         return '$' not in self.cname

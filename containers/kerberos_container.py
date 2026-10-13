@@ -57,7 +57,7 @@ class KerberosContainer:
         for obj in list_obj:
             self.append(obj)
 
-    def get_all(self):
+    def get_all(self)->List[Union[AsrepKerberos, AsrepKerberos, TgsrepKerberos]]:
         all:List[Union[AsrepKerberos, AsrepKerberos, TgsrepKerberos]] = []
         for krb_type in KerberosEtypeEnum:
             all.extend(self.asreq[krb_type].all)

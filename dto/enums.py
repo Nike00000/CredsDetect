@@ -10,6 +10,7 @@ class KerberosEtypeEnum(Enum):
     e23 = 23
 
 class NTLMResponseEnum(Enum):
+    RESPONSE_V1ESS = 'v1ess'
     RESPONSE_V1 = 'v1'
     RESPONSE_V2 = 'v2'
 

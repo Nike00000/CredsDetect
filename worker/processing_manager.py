@@ -1,33 +1,37 @@
 from rich.console import Console
 from rich.live import Live
 from queue import Empty
-from typing import List, Iterable
+from typing import List
 from containers.results_container import ResultsContainer
 from worker.processing_stats import ProcessingStats, FileStatus
-from worker.dashboard_manager import create_dashboard
+from output_workers.dashboard_manager import create_dashboard
 from datetime import datetime
 from dto.base_data import BaseData
 import time
 import multiprocessing
-import json
-from dto.kerberos_data import AsreqKerberos, AsrepKerberos, TgsrepKerberos
-from dto.net_ntlm_data import ChallengeNetNTLM, ResponseNetNTLM
-from dto.user_pass_data import UserPassData
-from output_manager.output_manager import print_results
+from output_workers.output_manager import print_results
+
+from parsers.base_parser import BaseParser
+from parsers.up_parsers.imap_parser import IMAPParser
+from parsers.up_parsers.ftp_parser import FTPParser
+from parsers.up_parsers.pop_parser import POPParser
+from parsers.up_parsers.smtp_parser import SMTPParser
+from parsers.up_parsers.ldap_parser import LDAPParser
+from parsers.netntlm.challenge_ntlm_parser import ChallengeNTLMParser
+from parsers.netntlm.resp_v1_parser import Resp_v1_Parser
+from parsers.netntlm.resp_v2_parser import Resp_v2_Parser
+from parsers.kerberos.asreq_parser import AsreqParser
+from parsers.kerberos.asrep_parser import AsrepParser
+from parsers.kerberos.tgsrep_parser import TgsrepKerberosParser
+from parsers.up_parsers.http_parser import HTTPAuthParser
+from parsers.up_parsers.http_proxy_parser import HTTPProxyAuthParser
 
 class ProcessingManager:
-
-    data_objects = [ChallengeNetNTLM,
-                ResponseNetNTLM,
-                AsreqKerberos,
-                AsrepKerberos,
-                TgsrepKerberos,
-                UserPassData]
+    SEP = '\x1f'
 
     def __init__(self,
                  count_processes: int,
                  input_files: List[str], 
-                 filter_protocols: List[str],
                  tshark_path: str,
                  current_result: bool,
                  quite: bool,
@@ -36,7 +40,6 @@ class ProcessingManager:
         self.console = Console()
         self.count_processes = count_processes
         self.input_files = input_files
-        self.filter_protocols = filter_protocols
         self.tshark_path = tshark_path
         self.current_result = current_result
         self.processed_files = 0
@@ -47,6 +50,25 @@ class ProcessingManager:
         self.last_update_time = datetime.now()
         self.output_folder = output_folder
         self.taskname = taskname
+        self.parsers = [IMAPParser,
+                        FTPParser,
+                        POPParser,
+                        SMTPParser,
+                        LDAPParser,
+                        ChallengeNTLMParser,
+                        Resp_v1_Parser,
+                        Resp_v2_Parser,
+                        AsreqParser, 
+                        AsrepParser,
+                        TgsrepKerberosParser,
+                        HTTPAuthParser,
+                        HTTPProxyAuthParser,
+                        BaseParser] #BaseParser must be last!
+        self.y_fields:List[str] = []
+        self.e_fields:List[str] = []
+        for parser in self.parsers:
+            self.y_fields.extend(parser.Y_FIELDS)
+            self.e_fields.extend(parser.E_FIELDS)
 
     def _validate_parameters(self) -> None:
         cpu_count = multiprocessing.cpu_count()
@@ -78,7 +100,7 @@ class ProcessingManager:
         for file_path in self.input_files:
             task = pool.apply_async(
                 process_file_func,
-                args=(file_path, shared_queue, self.filter_protocols, self.tshark_path),
+                args=(file_path, shared_queue, self.y_fields, self.e_fields, self.tshark_path),
                 error_callback=lambda e, fp=file_path: 
                 self.console.print(f"[red][!] Error processing {fp}: {e}[/red]")
             )
@@ -176,29 +198,38 @@ class ProcessingManager:
         self.console.print(f"[dim][*] File completed: {file_path}[/dim]")
 
     def _handle_parse_data(self, file_path: str, 
-                          result_lines: List[str]) -> None:
+                          bytes_lines: List[bytes]) -> None:
+
+
+        lines: list[str] = []
+        lines.extend(bytes_lines.decode('utf-8', errors='replace').splitlines())
+
         results: List[BaseData] = []
 
-        for line in result_lines:
-            try:
-                packet = json.loads(line)
-                if 'layers' in packet:
-                    for data_object in self.data_objects:
-                        try:
-                            data = data_object(packet=packet, filename=file_path)
-                            results.append(data)
-                            break
-                        except Exception as e:
-                            pass
-            except Exception as e:
+        for line in lines:
+            parts = line.split(self.SEP)
+            if len(self.e_fields) != len(parts):
+                self.console.print(f"[yellow][!] Field count mismatch: {file_path}[/yellow]")
                 continue
+            fields_dict = {}
+            for i, e_field in enumerate(self.e_fields):
+                fields_dict[e_field] = parts[i]
+
+            for parser in self.parsers:
+                if parser == BaseParser:
+                    continue
+                data = parser.parse(fields_dict)
+                if data:
+                    data.filename = file_path
+                    results.append(data)
+                    break
 
         if self.current_result:
             for base_data in results:
-                if base_data.is_user():
+                if base_data.is_user:
                     session = f"{base_data.src_ip}:{base_data.src_port} -> {base_data.dst_ip}:{base_data.dst_port}"
-                    text = f"[dim][*] From the session {session} file {base_data.filename} protocol {base_data.protocol()} auth with {base_data.authentication_protocol} found data:[/dim]\n"
-                    self.console.print(f"{text}{base_data.data()}", highlight=False)
+                    text = f"[dim][*] From the session {session} file {base_data.filename} protocol {base_data.protocol} auth with {base_data.authentication_protocol} found data:[/dim]\n"
+                    self.console.print(f"{text}{base_data.data}", highlight=False)
         
         self.results.extend(list(results))
         
