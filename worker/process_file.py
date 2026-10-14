@@ -26,7 +26,7 @@ def process_file(file_path, queue_process, y_fields, e_fields, tshark_path):
     command = _build_command(tshark_path, file_path, y_fields, e_fields)
     
     process = None
-    READ_SIZE = 1024 * 1024
+    READ_SIZE = 32 * 1024
 
     try:
         # Start subprocess

@@ -19,4 +19,3 @@ class SessionContainer(Generic[T]):
         if not self.sessions.get(data.session_id):
             self.sessions[data.session_id] = []
         self.sessions[data.session_id].append(data)
-        self.sessions[data.session_id].sort(key=lambda x: x.timestamp)

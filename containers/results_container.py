@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, overload, Union
+from typing import overload, Union
 from dto.user_pass_data import UPData
 from dto.net_ntlm_data import ChallengeNetNTLM, ResponseNetNTLM
 from dto.kerberos_data import AsreqKerberos, AsrepKerberos, TgsrepKerberos

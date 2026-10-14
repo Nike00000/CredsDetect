@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, List, Dict
+from typing import TypeVar, Generic, List, Dict, Iterable
 from dataclasses import dataclass, field
 from dto.base_data import BaseData
 
@@ -20,3 +20,7 @@ class UniqueContainer(Generic[T]):
         if data.is_user:
             self.users.append(data)
             self._unique[data.key] = data
+
+    def extend(self, items: Iterable[T]) -> None:
+        for item in items:
+            self.append(item)

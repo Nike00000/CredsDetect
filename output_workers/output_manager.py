@@ -48,7 +48,7 @@ def print_kerberos(results:ResultsContainer, folder:str, task_name:str):
 
 def print_ntlm(results:ResultsContainer, folder:str, task_name:str):
     for ntlm_type in NTLMResponseEnum:
-        print_unique_container(container=results.ntlm_container.merge_to_hash(ntlm_type),
+        print_unique_container(container=results.ntlm_container.get_by_version(ntlm_type),
                                folder=folder,
                                task_name=task_name,
                                name=f'ntlm_{ntlm_type.value}')

@@ -113,7 +113,7 @@ def create_ntlm_table(results: ResultsContainer) -> Table:
     table.add_column("unique user", justify="center")
 
     for response_type in NTLMResponseEnum:
-        responses = results.ntlm_container.merge_to_hash(response_type)
+        responses = results.ntlm_container.get_by_version(response_type)
         table.add_row('NT',
                       str(response_type.value),
                       str(len(responses.all)),
