@@ -8,7 +8,6 @@ from worker.processing_stats import FileStatus, ProcessingStats
 from containers.results_container import ResultsContainer
 from datetime import datetime, timedelta
 from dto.enums import NTLMResponseEnum, KerberosEtypeEnum, UserPassProtocolEnum
-from datetime import datetime 
 
 def create_dashboard(processing_stats: ProcessingStats, results: ResultsContainer) -> Layout:
     layout = Layout()
@@ -44,7 +43,7 @@ def create_dashboard(processing_stats: ProcessingStats, results: ResultsContaine
         Layout(create_ntlm_table(results=results), name="ntlm", size=5+len(NTLMResponseEnum)),
         Layout(create_kerberos_table(results=results), name="kerberos", size=14)
     )
-    if processing_stats.end_time == None:
+    if processing_stats.end_time is None:
         delta_datetime = datetime.now() - processing_stats.start_time
     else:
         delta_datetime = processing_stats.end_time - processing_stats.start_time
